@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Báo cáo | PharmaOS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Montserrat", sans-serif;
+        background-color: #f8fafc;
+        overflow: hidden;
+      }
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 4px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #e2e8f0;
+        border-radius: 10px;
+      }
+      .sidebar-item.active {
+        background-color: #eff6ff;
+        color: #2563eb;
+        border-right: 3px solid #2563eb;
+      }
+    </style>
+  </head>
+  <body class="h-screen flex">
+    <aside
+      class="w-44 bg-white border-r border-gray-100 flex flex-col shadow-sm"
+    >
+      <div class="p-4 mb-2">
+        <div class="flex items-center gap-2 text-blue-600">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
+            />
+          </svg>
+          <span
+            class="font-extrabold tracking-tighter text-base text-gray-800 uppercase"
+            >Pharma<span class="text-blue-600">OS</span></span
+          >
+        </div>
+      </div>
+
+      <nav class="flex-1 space-y-1">
+        <a
+          href="pos.html"
+          class="sidebar-item w-full flex items-center gap-2.5 px-4 py-3.5 text-[10px] font-bold text-gray-400 hover:bg-gray-50 uppercase transition-all"
+        >
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+            />
+          </svg>
+          BÁN HÀNG
+        </a>
+        <a
+          href="inventory.html"
+          class="sidebar-item w-full flex items-center gap-2.5 px-4 py-3.5 text-[10px] font-bold text-gray-400 hover:bg-gray-50 uppercase transition-all"
+        >
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+            />
+          </svg>
+          KHO THUỐC
+        </a>
+        <a
+          href="reports.html"
+          class="sidebar-item active w-full flex items-center gap-2.5 px-4 py-3.5 text-[10px] font-bold text-blue-600 uppercase transition-all"
+        >
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
+          </svg>
+          BÁO CÁO
+        </a>
+      </nav>
+
+      <div class="p-4 border-t border-gray-50 mt-auto bg-white">
+        <div class="flex items-center gap-2">
+          <div
+            class="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-sm"
+          >
+            D
+          </div>
+          <div class="min-w-0">
+            <p class="text-[9px] font-bold text-gray-800 truncate uppercase">
+              DOAN QUOC DAT
+            </p>
+            <p
+              class="text-[7px] font-semibold text-gray-400 uppercase tracking-tighter"
+            >
+              Dược sĩ trực
+            </p>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="flex-1 p-6 overflow-y-auto space-y-6 custom-scrollbar">
+      <div class="grid grid-cols-3 gap-6">
+        <div
+          class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md"
+        >
+          <p
+            class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1"
+          >
+            Doanh thu ngày
+          </p>
+          <p class="text-3xl font-black text-blue-600 tracking-tighter">
+            12.450.000đ
+          </p>
+        </div>
+        <div
+          class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md"
+        >
+          <p
+            class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1"
+          >
+            Hóa đơn đã xuất
+          </p>
+          <p class="text-3xl font-black text-gray-800 tracking-tighter">84</p>
+        </div>
+        <div
+          class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm border-l-4 border-l-red-400"
+        >
+          <p
+            class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1"
+          >
+            Sắp hết hạn/kho
+          </p>
+          <p class="text-3xl font-black text-red-500 tracking-tighter">03</p>
+        </div>
+      </div>
+
+      <div
+        class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
+      >
+        <div
+          class="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/30"
+        >
+          <h3 class="font-bold text-gray-700 text-xs uppercase tracking-widest">
+            Lịch sử hóa đơn gần đây
+          </h3>
+          <button
+            class="bg-white border border-gray-200 text-gray-500 px-4 py-2 rounded-xl text-[10px] font-bold uppercase hover:bg-gray-50 transition-all shadow-sm"
+          >
+            Xuất báo cáo Excel
+          </button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm font-medium">
+            <thead
+              class="text-[10px] font-bold text-gray-400 uppercase tracking-widest border-b border-gray-50"
+            >
+              <tr>
+                <th class="px-6 py-4">Mã hóa đơn</th>
+                <th class="px-6 py-4">Thời gian</th>
+                <th class="px-6 py-4 text-right">Tổng tiền</th>
+                <th class="px-6 py-4 text-center">Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50">
+              <tr class="hover:bg-gray-50/50 transition-colors">
+                <td class="px-6 py-4 font-bold text-blue-600 uppercase">
+                  #INV-9902
+                </td>
+                <td class="px-6 py-4 text-gray-500 text-xs font-bold">
+                  14:20 - 20/04/2026
+                </td>
+                <td class="px-6 py-4 text-right font-black text-gray-800">
+                  1.250.000đ
+                </td>
+                <td class="px-6 py-4 text-center">
+                  <span
+                    class="bg-blue-50 text-blue-600 px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-tighter"
+                    >VietQR - OK</span
+                  >
+                </td>
+              </tr>
+              <tr class="hover:bg-gray-50/50 transition-colors">
+                <td class="px-6 py-4 font-bold text-blue-600 uppercase">
+                  #INV-9901
+                </td>
+                <td class="px-6 py-4 text-gray-500 text-xs font-bold">
+                  14:05 - 20/04/2026
+                </td>
+                <td class="px-6 py-4 text-right font-black text-gray-800">
+                  45.000đ
+                </td>
+                <td class="px-6 py-4 text-center">
+                  <span
+                    class="bg-gray-50 text-gray-500 px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-tighter"
+                    >Tiền mặt</span
+                  >
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>
