@@ -1,10 +1,10 @@
 /**
- * PHARMA OS - POS FULL LOGIC CẬP NHẬT
+ * PHARMA OS - POS FULL LOGIC (Tích hợp Database)
  */
 
 let currentCart = [];
 let currentOrderId = null;
-let selectedPaymentMethod = null; // Lưu trạng thái chọn phương thức
+let selectedPaymentMethod = null;
 
 // Hàm load các thành phần UI từ file riêng
 async function loadComponents() {
@@ -21,41 +21,33 @@ async function loadComponents() {
 }
 loadComponents();
 
-const inventoryData = [
-  {
-    id: 1,
-    name: "Amoxicillin 500mg",
-    type: "Hộp 10 vỉ",
-    stock: 450,
-    price: 120000,
-  },
-  {
-    id: 2,
-    name: "Paracetamol 500mg",
-    type: "Hộp 10 vỉ",
-    stock: 124,
-    price: 45000,
-  },
-  { id: 3, name: "Panadol Extra", type: "Vỉ 10 viên", stock: 50, price: 15000 },
-  {
-    id: 4,
-    name: "Vitamin C 1000mg",
-    type: "Tuýp 20 viên",
-    stock: 300,
-    price: 65000,
-  },
-];
-
 const orderManager = {
-  init() {
-    this.renderInventory(inventoryData);
+  allProducts: [], // Biến lưu trữ toàn bộ sản phẩm từ DB
+
+  async init() {
+    // Tải dữ liệu từ database Dexie thay vì dùng mảng giả lập
+    await this.loadInventory();
     this.setupSearch();
+  },
+
+  async loadInventory() {
+    try {
+      // Lấy toàn bộ sản phẩm thực tế đang có trong IndexedDB
+      this.allProducts = await db.products.toArray();
+
+      // Nếu Database trống (do bạn đã comment phần nạp mẫu),
+      // thì allProducts sẽ là mảng rỗng [] -> Màn hình sẽ trắng tinh.
+      this.renderInventory(this.allProducts);
+    } catch (error) {
+      console.error("Lỗi truy vấn Database:", error);
+    }
   },
 
   setupSearch() {
     document.getElementById("search-input").addEventListener("input", (e) => {
       const term = e.target.value.toLowerCase();
-      const filtered = inventoryData.filter((i) =>
+      // Lọc trực tiếp trên mảng allProducts đã tải từ DB
+      const filtered = this.allProducts.filter((i) =>
         i.name.toLowerCase().includes(term),
       );
       this.renderInventory(filtered);
@@ -83,25 +75,46 @@ const orderManager = {
     document.getElementById("search-input").focus();
   },
 
+  // 2. Hàm vẽ giao diện
   renderInventory(data) {
     const list = document.getElementById("inventory-list");
+    if (!list) return;
+
     list.innerHTML = data
-      .map(
-        (item) => `
-        <tr class="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-            <td class="px-3 py-4">
-                <p class="font-bold text-gray-700 uppercase text-[11px]">${item.name}</p>
-                <p class="text-[9px] text-gray-400 font-semibold italic">${item.type} | Tồn: <span class="text-blue-500">${item.stock}</span></p>
-            </td>
-            <td class="px-3 py-4 text-center">
-                <input type="number" id="qty-${item.id}" value="1" min="1" max="${item.stock}" 
-                    class="w-16 text-center border border-gray-200 rounded-lg py-1.5 font-bold outline-none bg-white">
-            </td>
-            <td class="px-3 py-4 text-right">
-                <button onclick="orderManager.addToCart(${item.id})" class="bg-blue-600 text-white w-8 h-8 rounded-lg font-bold hover:bg-blue-700 shadow-sm">+</button>
-            </td>
-        </tr>`,
-      )
+      .map((item) => {
+        const itemId = item.id;
+        // Xử lý tồn kho an toàn, không để hiện NaN
+        const stock = Number(item.stock) || 0;
+
+        // Logic màu sắc: 0 = Đỏ, <= 5 = Vàng, còn lại = Xanh
+        let stockColorClass = "text-blue-500";
+        if (stock === 0) {
+          stockColorClass = "text-red-500 font-black";
+        } else if (stock <= 5) {
+          stockColorClass = "text-yellow-500 font-bold";
+        }
+
+        return `
+      <tr class="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+          <td class="px-3 py-4">
+              <p class="font-bold text-gray-700 uppercase text-[11px]">${item.name}</p>
+                <p class="text-[9px] text-gray-400 font-semibold italic">
+                 ${item.type || "Đơn vị"} | Tồn: <span class="${stockColorClass}">${stock}</span>
+                </p>
+          </td>
+          <td class="px-3 py-4 text-center">
+              <input type="number" id="qty-${itemId}" value="1" min="1" max="${stock}" 
+                  class="w-16 text-center border border-gray-200 rounded-lg py-1.5 font-bold outline-none bg-white text-xs">
+          </td>
+          <td class="px-3 py-4 text-right">
+              <button onclick="orderManager.addToCart(${itemId})" 
+                  ${stock <= 0 ? "disabled" : ""}
+                  class="bg-blue-600 text-white w-8 h-8 rounded-lg font-bold hover:bg-blue-700 shadow-sm ${stock <= 0 ? "opacity-30 cursor-not-allowed" : ""}">
+                  +
+              </button>
+          </td>
+      </tr>`;
+      })
       .join("");
   },
 
@@ -110,15 +123,43 @@ const orderManager = {
       alert("Vui lòng bấm 'TẠO ĐƠN MỚI'!");
       return;
     }
-    const product = inventoryData.find((p) => p.id === id);
-    const qty = parseInt(document.getElementById(`qty-${id}`).value);
-    if (qty > product.stock) {
-      alert("Kho không đủ!");
+
+    // Tìm sản phẩm trong danh sách đã tải từ DB (ép kiểu id về số)
+    const product = this.allProducts.find((p) => Number(p.id) === Number(id));
+    if (!product) return;
+
+    // Lấy số lượng từ input và ép kiểu
+    const qtyInput = document.getElementById(`qty-${id}`);
+    const qty = parseInt(qtyInput.value) || 0;
+
+    if (qty <= 0) {
+      alert("Số lượng phải lớn hơn 0!");
       return;
     }
-    const exist = currentCart.find((c) => c.id === id);
-    if (exist) exist.quantity += qty;
-    else currentCart.push({ ...product, quantity: qty });
+
+    const currentStock = Number(product.stock) || 0;
+
+    if (qty > currentStock) {
+      alert("Kho không đủ số lượng!");
+      return;
+    }
+
+    const exist = currentCart.find((c) => Number(c.id) === Number(id));
+    if (exist) {
+      // Kiểm tra xem tổng số lượng có vượt tồn kho không
+      if (Number(exist.quantity) + qty > currentStock) {
+        alert("Tổng số lượng trong giỏ vượt quá tồn kho!");
+        return;
+      }
+      exist.quantity += qty;
+    } else {
+      // Đưa vào giỏ hàng, đặt tên trường là quantity để đồng bộ với code cũ của bạn
+      currentCart.push({
+        ...product,
+        quantity: qty,
+      });
+    }
+
     this.renderCart();
   },
 
@@ -127,13 +168,13 @@ const orderManager = {
     const list = document.getElementById("cart-list");
     list.innerHTML = currentCart
       .map((item, idx) => {
-        const sub = item.price * item.quantity;
+        const sub = item.sell_price * item.quantity;
         total += sub;
         return `<tr class="p-4 block border-b border-gray-50">
                 <td class="w-full flex justify-between items-center">
                     <div>
                         <p class="text-[11px] font-bold text-gray-700 uppercase">${item.name}</p>
-                        <p class="text-[10px] text-blue-600 font-bold">${item.quantity} x ${item.price.toLocaleString()}đ</p>
+                        <p class="text-[10px] text-blue-600 font-bold">${item.quantity} x ${item.sell_price.toLocaleString()}đ</p>
                     </div>
                     <div class="flex items-center gap-3">
                         <span class="font-black text-gray-800">${sub.toLocaleString()}đ</span>
@@ -143,6 +184,7 @@ const orderManager = {
             </tr>`;
       })
       .join("");
+
     const formattedTotal = total.toLocaleString() + "đ";
     document.getElementById("total-price").innerText = formattedTotal;
     document.getElementById("grand-total").innerText = formattedTotal;
@@ -155,14 +197,22 @@ const orderManager = {
 
   clearOrder() {
     if (!currentOrderId) return;
-    if (confirm("Xóa đơn hàng này?")) this.resetSystem();
+    if (confirm("Bạn có chắc chắn muốn xóa đơn hàng này?")) {
+      currentCart = [];
+      currentOrderId = null;
+      this.renderCart();
+      const label = document.getElementById("order-id");
+      label.innerText = "ĐỢI LỆNH";
+      label.className =
+        "text-[9px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded tracking-tight";
+    }
   },
 
-  // --- LOGIC THANH TOÁN MỚI ---
+  // --- LOGIC THANH TOÁN ---
 
   openPaymentModal() {
     if (!currentOrderId || currentCart.length === 0) {
-      alert("Chưa có sản phẩm hoặc đơn hàng chưa được tạo!");
+      alert("Chưa có sản phẩm trong giỏ hoặc chưa tạo đơn hàng!");
       return;
     }
     document.getElementById("modal-order-id").innerText = currentOrderId;
@@ -213,7 +263,7 @@ const orderManager = {
       activeBtn.classList.add("bg-blue-50", "text-blue-600");
       inactiveBtn.classList.add("opacity-10", "cursor-not-allowed");
 
-      // Cập nhật nút tác vụ (Không in nổi bật hơn In)
+      // Cập nhật nút tác vụ
       btnNoPrint.disabled = false;
       btnNoPrint.className =
         "flex-[1.8] bg-blue-600 text-white rounded-[32px] font-black text-2xl uppercase tracking-wider transition-all flex items-center justify-center text-center px-6 shadow-[0_20px_50px_rgba(37,99,235,0.3)] hover:bg-blue-700";
@@ -241,7 +291,6 @@ const orderManager = {
     if (selectedPaymentMethod === "transfer") {
       this.closePaymentModal();
       this.openQRModal(soTien);
-      // Bạn có thể lưu biến shouldPrint để in hóa đơn sau khi đóng QR modal
       this.lastOrderShouldPrint = shouldPrint;
     } else {
       alert(shouldPrint ? "Đang in hóa đơn..." : "Đã thanh toán tiền mặt.");
@@ -253,7 +302,7 @@ const orderManager = {
     const qrImg = document.getElementById("qr-image");
     const qrLoading = document.getElementById("qr-loading");
 
-    // Cấu hình link VietQR
+    // Cấu hình link VietQR (Giữ nguyên cấu hình của bạn)
     const bankId = "970437";
     const accountNo = "045704070016757";
     const template = "compact2";
@@ -278,8 +327,16 @@ const orderManager = {
   },
 
   closeQRModal() {
+    // Đóng modal QR
     document.getElementById("qr-modal").classList.add("hidden");
-    if (this.lastOrderShouldPrint) alert("Đang in hóa đơn...");
+
+    // Nếu trước đó người dùng chọn "In hóa đơn" rồi mới hiện QR
+    if (this.lastOrderShouldPrint) {
+      console.log("Đang in hóa đơn...");
+      // Thực hiện lệnh in ở đây nếu có
+    }
+
+    // GỌI HÀM HOÀN TẤT ĐỂ TRỪ KHO
     this.completeTransaction();
   },
 
@@ -288,20 +345,53 @@ const orderManager = {
     document.getElementById("payment-modal").classList.remove("hidden");
   },
 
-  completeTransaction() {
-    // Reset giỏ hàng và ID đơn hàng
-    currentCart = [];
-    currentOrderId = null;
-    this.renderCart();
+  // Cập nhật hàm này trong pos.js
+  async completeTransaction() {
+    console.log("Đang hoàn tất đơn hàng và trừ kho...");
+    try {
+      // 1. Chạy vòng lặp trừ kho cho từng món trong giỏ
+      for (const item of currentCart) {
+        const productId = Number(item.id);
+        const productFromDB = await db.products.get(productId);
 
-    const label = document.getElementById("order-id");
-    label.innerText = "ĐỢI LỆNH";
-    label.className =
-      "text-[9px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded";
+        if (productFromDB) {
+          const oldStock = Number(productFromDB.stock) || 0;
+          const oldExport = Number(productFromDB.total_export) || 0;
+          const soldQty = Number(item.quantity) || 0; // Lưu ý: dùng .quantity theo code của bạn
 
-    this.closePaymentModal();
+          await db.products.update(productId, {
+            stock: oldStock - soldQty,
+            total_export: oldExport + soldQty,
+          });
+        }
+      }
+
+      // 2. Reset giỏ hàng và UI
+      currentCart = [];
+      currentOrderId = null;
+      await this.loadInventory(); // Cập nhật số lượng mới lên màn hình
+      this.renderCart();
+
+      // Đóng tất cả các Modal
+      this.closePaymentModal();
+      if (document.getElementById("qr-modal")) {
+        document.getElementById("qr-modal").classList.add("hidden");
+      }
+
+      const label = document.getElementById("order-id");
+      if (label) label.innerText = "ĐỢI LỆNH";
+    } catch (error) {
+      console.error("Lỗi workflow thanh toán:", error);
+      alert("Lỗi: Không thể cập nhật kho hàng!");
+    }
   },
 };
 
-window.orderManager = orderManager;
-orderManager.init();
+// Khởi chạy sau khi tài liệu đã sẵn sàng để đảm bảo DB đã được nạp
+window.addEventListener("DOMContentLoaded", () => {
+  window.orderManager = orderManager;
+  // Đợi 100ms để đảm bảo database.js initDB() tạo xong dữ liệu mẫu nếu chưa có
+  setTimeout(() => {
+    orderManager.init();
+  }, 100);
+});

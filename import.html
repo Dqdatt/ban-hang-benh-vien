@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nhập Hàng | PharmaOS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
+    <script src="database.js"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Montserrat", sans-serif;
+        background-color: #f8fafc;
+        overflow: hidden;
+      }
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 4px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #e2e8f0;
+        border-radius: 10px;
+      }
+      .sidebar-item.active {
+        background-color: #eff6ff;
+        color: #2563eb;
+        border-right: 3px solid #2563eb;
+      }
+      #autocomplete-list {
+        z-index: 50;
+        max-height: 250px;
+        overflow-y: auto;
+      }
+      .suggestion-item:hover {
+        background-color: #eff6ff;
+        color: #2563eb;
+      }
+    </style>
+  </head>
+  <body class="h-screen flex">
+    <aside
+      class="w-44 bg-white border-r border-gray-100 flex flex-col shadow-sm"
+    >
+      <div class="p-4 mb-2">
+        <div class="flex items-center gap-2 text-blue-600">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
+            />
+          </svg>
+          <span
+            class="font-extrabold tracking-tighter text-base text-gray-800 uppercase"
+            >Pharma<span class="text-blue-600">OS</span></span
+          >
+        </div>
+      </div>
+
+      <nav class="flex-1 space-y-1">
+        <a
+          href="pos.html"
+          class="sidebar-item w-full flex items-center gap-2.5 px-4 py-3.5 text-[10px] font-bold text-gray-400 hover:bg-gray-50 uppercase transition-all"
+        >
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+            />
+          </svg>
+          BÁN HÀNG
+        </a>
+
+        <div class="w-full">
+          <button
+            onclick="window.location.href = 'inventory.html'"
+            class="sidebar-item active w-full flex items-center justify-between px-4 py-3.5 text-[10px] font-bold text-blue-600 uppercase transition-all hover:bg-gray-50"
+          >
+            <div class="flex items-center gap-2.5">
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                />
+              </svg>
+              KHO THUỐC
+            </div>
+            <svg
+              id="inv-drop-icon"
+              onclick="
+                event.stopPropagation();
+                toggleDrop('inv-drop');
+              "
+              class="w-3 h-3 transition-transform duration-300 rotate-180"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
+          </button>
+          <div
+            id="inv-drop"
+            class="bg-blue-50/30 overflow-hidden transition-all duration-300"
+          >
+            <a
+              href="inventory.html"
+              class="flex items-center gap-2 pl-11 py-3 text-[9px] font-bold text-gray-400 hover:text-blue-600 hover:bg-blue-50 uppercase transition-all"
+            >
+              <span class="w-1 h-1 bg-gray-300 rounded-full"></span>
+              TỔNG KHO
+            </a>
+            <a
+              href="import.html"
+              class="flex items-center gap-2 pl-11 py-3 text-[9px] font-black text-blue-700 uppercase hover:bg-blue-50 transition-all"
+            >
+              <span class="w-1 h-1 bg-blue-600 rounded-full"></span>
+              NHẬP HÀNG
+            </a>
+          </div>
+        </div>
+
+        <a
+          href="reports.html"
+          class="sidebar-item w-full flex items-center gap-2.5 px-4 py-3.5 text-[10px] font-bold text-gray-400 hover:bg-gray-50 uppercase"
+        >
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
+          </svg>
+          BÁO CÁO
+        </a>
+      </nav>
+      <div class="p-4 border-t border-gray-50 mt-auto bg-white relative">
+        <div
+          id="user-menu-btn"
+          class="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 -mx-2 rounded-xl transition-colors"
+        >
+          <div
+            id="user-avatar"
+            class="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-sm"
+          ></div>
+          <div class="min-w-0 flex-1">
+            <p
+              id="user-name-display"
+              class="text-[9px] font-bold text-gray-800 truncate uppercase"
+            ></p>
+            <p
+              id="user-role-display"
+              class="text-[7px] font-semibold text-gray-400 uppercase tracking-tighter"
+            ></p>
+          </div>
+          <svg
+            class="w-4 h-4 text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 9l-7 7-7-7"
+            />
+          </svg>
+        </div>
+
+        <div
+          id="user-dropdown"
+          class="hidden absolute bottom-[110%] left-4 right-4 bg-white border border-gray-100 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.08)] overflow-hidden z-50"
+        >
+          <a
+            href="info.html"
+            class="block w-full text-left px-4 py-3.5 text-[10px] font-bold text-gray-700 hover:bg-gray-50 uppercase border-b border-gray-50 transition-colors"
+          >
+            Thông tin
+          </a>
+          <button
+            onclick="AuthManager.logout()"
+            class="w-full text-left px-4 py-3.5 text-[10px] font-bold text-red-500 hover:bg-red-50 uppercase transition-colors"
+          >
+            Đăng xuất
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="flex-1 p-6 overflow-hidden flex flex-col">
+      <div
+        class="bg-white rounded-2xl border border-gray-100 shadow-sm h-full flex flex-col overflow-hidden transition-all hover:shadow-md"
+      >
+        <div
+          class="flex-1 overflow-hidden flex flex-col bg-white rounded-[32px] m-4 shadow-sm border border-gray-100"
+        >
+          <div class="p-6 border-b border-gray-50 bg-gray-50/30 relative z-20">
+            <div class="flex justify-between items-center mb-5">
+              <h2
+                class="font-black text-gray-800 uppercase tracking-tighter text-xl"
+              >
+                THÔNG TIN NHẬP HÀNG
+              </h2>
+            </div>
+
+            <div class="grid grid-cols-12 gap-3 items-end relative">
+              <div class="col-span-3 relative">
+                <label
+                  class="block text-[9px] font-bold text-gray-800 uppercase tracking-wider mb-1 ml-1"
+                  >Tên thuốc</label
+                >
+                <input
+                  type="text"
+                  id="input-name"
+                  placeholder="Tìm tên hoặc nhập mới..."
+                  autocomplete="off"
+                  class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-[13px] font-medium text-gray-700 uppercase bg-white placeholder:font-normal placeholder:text-[10px] placeholder:text-gray-300"
+                />
+                <div
+                  id="autocomplete-list"
+                  class="absolute left-0 right-0 top-full mt-1.5 bg-white border border-gray-100 rounded-2xl shadow-xl hidden overflow-hidden"
+                ></div>
+              </div>
+
+              <div class="col-span-1">
+                <label
+                  class="block text-[9px] font-bold text-gray-800 uppercase tracking-wider mb-1 ml-1"
+                  >ĐVT</label
+                >
+                <input
+                  type="text"
+                  id="input-unit"
+                  class="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-[13px] font-medium text-center text-gray-700 bg-white placeholder:font-normal placeholder:text-[10px] placeholder:text-gray-300"
+                />
+              </div>
+
+              <div class="col-span-1">
+                <label
+                  class="block text-[9px] font-bold text-gray-800 uppercase tracking-wider mb-1 ml-1"
+                  >Số lượng</label
+                >
+                <input
+                  type="number"
+                  id="input-qty"
+                  value="1"
+                  min="1"
+                  class="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-[13px] font-medium text-blue-600 text-center bg-white placeholder:font-normal placeholder:text-[10px] placeholder:text-gray-300"
+                />
+              </div>
+
+              <div class="col-span-2">
+                <label
+                  class="block text-[9px] font-bold text-gray-800 uppercase tracking-wider mb-1 ml-1"
+                  >Giá nhập</label
+                >
+                <input
+                  type="text"
+                  id="input-price"
+                  placeholder="VNĐ"
+                  class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-[13px] font-medium text-gray-800 text-right bg-white placeholder:font-normal placeholder:text-[10px] placeholder:text-gray-300"
+                />
+              </div>
+
+              <div class="col-span-3">
+                <label
+                  class="block text-[9px] font-bold text-gray-800 uppercase tracking-wider mb-1 ml-1"
+                  >Công nợ</label
+                >
+                <input
+                  type="text"
+                  id="input-note"
+                  class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-[13px] font-medium text-gray-700 bg-white placeholder:font-normal placeholder:text-[10px] placeholder:text-gray-300"
+                />
+              </div>
+
+              <div class="col-span-2">
+                <button
+                  onclick="handleImport()"
+                  class="w-full bg-blue-600 text-white font-bold py-2.5 rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 uppercase text-[16px] tracking-widest active:scale-95"
+                >
+                  NHẬP HÀNG
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex-1 overflow-auto custom-scrollbar bg-white z-10">
+            <table class="w-full text-left border-collapse min-w-[1000px]">
+              <thead class="sticky top-0 bg-white shadow-sm z-10">
+                <tr class="border-b border-gray-100">
+                  <th
+                    class="px-2 py-4 text-[10px] font-black text-gray-400 uppercase text-center w-12"
+                  >
+                    STT
+                  </th>
+                  <th
+                    class="px-2 py-4 text-[10px] font-black text-gray-400 uppercase"
+                  >
+                    Tên thuốc
+                  </th>
+                  <th
+                    class="px-2 py-4 text-[10px] font-black text-gray-400 uppercase text-center w-24"
+                  >
+                    ĐVT
+                  </th>
+                  <th
+                    class="px-2 py-4 text-[10px] font-black text-gray-400 uppercase text-center w-20"
+                  >
+                    SL
+                  </th>
+                  <th
+                    class="px-2 py-4 text-[10px] font-black text-gray-400 uppercase text-right w-32"
+                  >
+                    Giá nhập
+                  </th>
+                  <th
+                    class="px-2 py-4 text-[10px] font-black text-gray-400 uppercase text-right w-32"
+                  >
+                    Thành tiền
+                  </th>
+                  <th
+                    class="px-2 py-4 text-[10px] font-black text-gray-400 uppercase text-center w-32"
+                  >
+                    Thời gian
+                  </th>
+                  <th
+                    class="px-2 py-4 text-[10px] font-black text-gray-400 uppercase"
+                  >
+                    Ghi chú
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="import-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      function toggleDrop(id) {
+        const drop = document.getElementById(id);
+        const icon = document.getElementById(id + "-icon");
+        drop.classList.toggle("hidden");
+        icon.classList.toggle("rotate-180");
+      }
+
+      let dbProducts = [];
+      let selectedIndex = -1;
+
+      document.addEventListener("DOMContentLoaded", async () => {
+        if (typeof AuthManager !== "undefined") {
+          AuthManager.checkSession();
+        }
+
+        // Tải danh sách sản phẩm từ DB để làm gợi ý (Autocomplete)
+        dbProducts = await db.products.toArray();
+
+        // Tải và hiển thị lịch sử nhập hàng từ DB (giữ lại kể cả khi logout/f5)
+        loadImportHistory();
+
+        setupAutocomplete();
+        setupPriceFormatting();
+      });
+
+      // Hàm tải lịch sử nhập hàng từ IndexedDB
+      async function loadImportHistory() {
+        try {
+          // Lấy 50 bản ghi mới nhất từ bảng import_history
+          const history = await db.import_history
+            .orderBy("id")
+            .reverse()
+            .limit(50)
+            .toArray();
+          renderTable(history);
+        } catch (err) {
+          console.error("Không thể tải lịch sử nhập hàng:", err);
+        }
+      }
+
+      function setupAutocomplete() {
+        const input = document.getElementById("input-name");
+        const list = document.getElementById("autocomplete-list");
+        const unitInput = document.getElementById("input-unit");
+
+        input.addEventListener("input", (e) => {
+          const val = e.target.value.toUpperCase();
+          list.innerHTML = "";
+          selectedIndex = -1;
+
+          if (!val) {
+            list.classList.add("hidden");
+            return;
+          }
+
+          const matches = dbProducts.filter((p) =>
+            p.name.toUpperCase().includes(val),
+          );
+
+          if (matches.length > 0) {
+            matches.forEach((p, index) => {
+              const div = document.createElement("div");
+              div.className =
+                "px-4 py-3 text-[11px] font-bold uppercase cursor-pointer suggestion-item border-b border-gray-50 last:border-0 transition-colors";
+              div.id = "suggestion-" + index;
+              div.innerText = p.name;
+              div.onclick = () => selectProduct(p);
+              list.appendChild(div);
+            });
+            list.classList.remove("hidden");
+          } else {
+            list.classList.add("hidden");
+          }
+        });
+
+        // XỬ LÝ PHÍM MŨI TÊN VÀ PHÍM RETURN (ENTER) CHO MAC
+        input.addEventListener("keydown", (e) => {
+          const items = list.getElementsByClassName("suggestion-item");
+
+          if (!list.classList.contains("hidden") && items.length > 0) {
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+              selectedIndex = (selectedIndex + 1) % items.length;
+              updateSelection(items);
+            } else if (e.key === "ArrowUp") {
+              e.preventDefault();
+              selectedIndex = (selectedIndex - 1 + items.length) % items.length;
+              updateSelection(items);
+            } else if (e.key === "Enter" || e.keyCode === 13) {
+              if (selectedIndex > -1) {
+                e.preventDefault(); // Chặn hành vi submit mặc định
+                const selectedName = items[selectedIndex].innerText;
+                const product = dbProducts.find((p) => p.name === selectedName);
+                if (product) selectProduct(product);
+              }
+            }
+          }
+        });
+
+        function updateSelection(items) {
+          for (let i = 0; i < items.length; i++) {
+            items[i].classList.remove("bg-blue-50", "text-blue-600");
+          }
+          if (selectedIndex > -1) {
+            items[selectedIndex].classList.add("bg-blue-50", "text-blue-600");
+            items[selectedIndex].scrollIntoView({ block: "nearest" });
+          }
+        }
+
+        function selectProduct(p) {
+          input.value = p.name;
+          unitInput.value = p.type || ""; // Giữ nguyên định dạng ĐVT từ DB
+          list.classList.add("hidden");
+          selectedIndex = -1;
+
+          // Tự động nhảy sang ô Số lượng và bôi đen để nhập nhanh
+          setTimeout(() => {
+            const qtyInput = document.getElementById("input-qty");
+            qtyInput.focus();
+            qtyInput.select();
+          }, 10);
+        }
+
+        document.addEventListener("click", (e) => {
+          if (e.target !== input) list.classList.add("hidden");
+        });
+      }
+
+      function setupPriceFormatting() {
+        const priceInput = document.getElementById("input-price");
+        priceInput.addEventListener("input", (e) => {
+          let value = e.target.value.replace(/[^0-9]/g, "");
+          if (value) {
+            e.target.value = parseInt(value).toLocaleString();
+          }
+        });
+      }
+
+      async function handleImport() {
+        const name = document.getElementById("input-name").value.trim();
+        const unit = document.getElementById("input-unit").value.trim();
+        const qty = parseInt(document.getElementById("input-qty").value) || 0;
+        const priceStr = document
+          .getElementById("input-price")
+          .value.replace(/,/g, "");
+        const price = parseInt(priceStr) || 0;
+        const note = document.getElementById("input-note").value;
+
+        if (!name || qty <= 0 || price <= 0)
+          return alert("Vui lòng điền đủ thông tin!");
+
+        try {
+          // 1. Cập nhật tồn kho trong bảng products
+          const existing = await db.products.where("name").equals(name).first();
+          if (existing) {
+            await db.products.update(existing.id, {
+              stock: (existing.stock || 0) + qty,
+              total_import: (existing.total_import || 0) + qty,
+              import_price: price,
+              type: unit,
+            });
+          } else {
+            await db.products.add({
+              name: name,
+              type: unit,
+              stock: qty,
+              stock_initial: 0,
+              total_import: qty,
+              total_export: 0,
+              import_price: price,
+              sell_price: price * 1.2,
+              status: "Đủ hàng",
+            });
+          }
+
+          // 2. Tạo chuỗi thời gian đầy đủ (Ngày/Tháng/Năm Giờ:Phút:Giây)
+          const now = new Date();
+          const timeStr = `${now.getDate().toString().padStart(2, "0")}/${(now.getMonth() + 1).toString().padStart(2, "0")}/${now.getFullYear()} ${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}:${now.getSeconds().toString().padStart(2, "0")}`;
+
+          // 3. Lưu vào bảng import_history để giữ lịch sử vĩnh viễn
+          await db.import_history.add({
+            name,
+            unit,
+            qty,
+            price,
+            note,
+            time: timeStr,
+            total: qty * price,
+            user_id: localStorage.getItem("currentUser"),
+          });
+
+          // 4. Cập nhật lại UI
+          dbProducts = await db.products.toArray();
+          loadImportHistory();
+
+          // 5. Reset form và tự động focus về ô tên thuốc
+          document.getElementById("input-name").value = "";
+          document.getElementById("input-unit").value = "";
+          document.getElementById("input-qty").value = "1";
+          document.getElementById("input-price").value = "";
+          document.getElementById("input-note").value = "";
+          document.getElementById("input-name").focus();
+        } catch (err) {
+          console.error("Lỗi khi xử lý nhập kho:", err);
+        }
+      }
+
+      function renderTable(data) {
+        const tbody = document.getElementById("import-tbody");
+        if (!data || data.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="8" class="py-20 text-center text-gray-400 font-bold uppercase text-[10px]">Chưa có dữ liệu nhập hàng</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = data
+          .map(
+            (item, index) => `
+                <tr class="hover:bg-blue-50/20 border-b border-gray-50 transition-all group">
+                    <td class="px-2 py-2.5 text-center text-[11px] font-medium text-gray-400">${index + 1}</td>
+                    <td class="px-2 py-2.5 font-semibold text-gray-800 uppercase text-[11px]">${item.name}</td>
+                    <td class="px-2 py-2.5 text-center text-gray-800 font-medium text-[11px]">${item.unit}</td>
+                    <td class="px-2 py-2.5 text-center font-bold text-gray-800 text-[11px] bg-gray-50/50">${item.qty}</td>
+                    <td class="px-2 py-2.5 text-right font-medium text-gray-800 text-[11px]">${item.price.toLocaleString()}</td>
+                    <td class="px-2 py-2.5 text-right font-bold text-gray-800 text-[11px]">${item.total.toLocaleString()}đ</td>
+                    <td class="px-2 py-2.5 text-center text-gray-800 font-medium text-[11px] uppercase whitespace-nowrap">${item.time}</td>
+                    <td class="px-4 py-2.5 text-[11px] italic text-gray-800 font-medium">${item.note || ""}</td>
+                </tr>
+            `,
+          )
+          .join("");
+      }
+    </script>
+  </body>
+</html>

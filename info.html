@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Thông tin nhân viên | PharmaOS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
+    <script src="database.js"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body { font-family: "Montserrat", sans-serif; background-color: #f8fafc; }
+      .card-shadow { shadow-sm border border-gray-100; }
+    </style>
+  </head>
+  <body class="min-h-screen bg-[#f8fafc] p-8">
+    <div class="max-w-6xl mx-auto">
+      <div class="flex justify-between items-center mb-8">
+        <div>
+          <h1
+            class="text-3xl font-black text-gray-900 uppercase tracking-tighter"
+          >
+            Hệ thống nhân sự
+          </h1>
+          <p
+            class="text-gray-400 text-xs font-bold uppercase tracking-widest mt-1"
+          >
+            Quản lý hồ sơ và tài khoản nội bộ
+          </p>
+        </div>
+        <a
+          href="pos.html"
+          class="bg-white px-6 py-3 rounded-2xl border border-gray-100 text-[11px] font-black text-blue-600 uppercase tracking-wider hover:bg-blue-50 transition-all shadow-sm"
+        >
+          ← Quay lại bán hàng
+        </a>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="lg:col-span-1 space-y-6">
+          <div
+            class="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm"
+          >
+            <div class="flex items-center gap-4 mb-8">
+              <div
+                class="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white text-xl font-black"
+              >
+                <span id="avatar-char">D</span>
+              </div>
+              <div>
+                <h2
+                  class="font-black text-gray-800 uppercase text-sm leading-tight"
+                  id="display-name"
+                >
+                  N/A
+                </h2>
+                <span
+                  class="text-[10px] font-bold text-blue-500 uppercase tracking-wider"
+                  id="display-role"
+                  >Vai trò</span
+                >
+              </div>
+            </div>
+
+            <form id="profile-form" class="space-y-5">
+              <div>
+                <label
+                  class="block text-[10px] font-bold text-gray-400 uppercase mb-2 ml-1"
+                  >Họ và tên thực</label
+                >
+                <input
+                  type="text"
+                  id="p-fullname"
+                  class="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/50 text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                />
+              </div>
+              <div>
+                <label
+                  class="block text-[10px] font-bold text-gray-400 uppercase mb-2 ml-1"
+                  >Tên đăng nhập</label
+                >
+                <input
+                  type="text"
+                  id="p-username"
+                  disabled
+                  class="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-100 text-sm font-semibold text-gray-400 cursor-not-allowed"
+                />
+              </div>
+              <div>
+                <label
+                  class="block text-[10px] font-bold text-gray-400 uppercase mb-2 ml-1"
+                  >Mật khẩu mới</label
+                >
+                <input
+                  type="password"
+                  id="p-password"
+                  placeholder="Để trống nếu không đổi"
+                  class="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/50 text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                />
+              </div>
+              <button
+                type="submit"
+                class="w-full bg-gray-900 text-white py-5 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] hover:bg-black transition-all shadow-lg active:scale-95 pt-6"
+              >
+                Cập nhật thông tin
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <div id="admin-section" class="lg:col-span-2 hidden">
+          <div
+            class="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm h-full"
+          >
+            <h2
+              class="font-black text-gray-800 text-xl uppercase tracking-tighter mb-8"
+            >
+              Thêm nhân viên mới
+            </h2>
+
+            <form id="admin-form" class="grid grid-cols-2 gap-6">
+              <div class="col-span-2 md:col-span-1">
+                <label
+                  class="block text-[10px] font-bold text-gray-400 uppercase mb-2 ml-1"
+                  >Tên tài khoản (Username)</label
+                >
+                <input
+                  type="text"
+                  id="a-username"
+                  required
+                  class="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div class="col-span-2 md:col-span-1">
+                <label
+                  class="block text-[10px] font-bold text-gray-400 uppercase mb-2 ml-1"
+                  >Mật khẩu đăng nhập</label
+                >
+                <input
+                  type="password"
+                  id="a-password"
+                  required
+                  class="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div class="col-span-2 md:col-span-1">
+                <label
+                  class="block text-[10px] font-bold text-gray-400 uppercase mb-2 ml-1"
+                  >Họ tên nhân viên</label
+                >
+                <input
+                  type="text"
+                  id="a-fullname"
+                  required
+                  class="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div class="col-span-2 md:col-span-1">
+                <label
+                  class="block text-[10px] font-bold text-gray-400 uppercase mb-2 ml-1"
+                  >Phân quyền</label
+                >
+                <select
+                  id="a-role"
+                  class="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
+                >
+                  <option value="Dược sĩ">Dược sĩ (Bán hàng)</option>
+                  <option value="Admin">Quản trị viên (Toàn quyền)</option>
+                </select>
+              </div>
+              <div class="col-span-2 pt-4">
+                <button
+                  type="submit"
+                  class="w-full bg-blue-600 text-white py-5 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 active:scale-95"
+                >
+                  Khởi tạo tài khoản nhân viên
+                </button>
+              </div>
+            </form>
+
+            <div class="mt-12">
+              <h3
+                class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4"
+              >
+                Lưu ý bảo mật
+              </h3>
+              <p class="text-[11px] text-gray-400 leading-relaxed font-medium">
+                Tài khoản được tạo sẽ có hiệu lực ngay lập tức. Nhân viên có thể
+                đăng nhập bằng mã tài khoản và mật khẩu bạn đã cấp. Hãy nhắc nhở
+                nhân viên đổi mật khẩu cá nhân sau khi nhận tài khoản.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let currentSession = null;
+
+      document.addEventListener("DOMContentLoaded", async () => {
+        currentSession = AuthManager.checkSession();
+        if (!currentSession) return;
+
+        // Cập nhật giao diện cá nhân
+        document.getElementById("p-fullname").value = currentSession.full_name;
+        document.getElementById("p-username").value = currentSession.username;
+        document.getElementById("display-name").innerText =
+          currentSession.full_name;
+        document.getElementById("display-role").innerText = currentSession.role;
+        document.getElementById("avatar-char").innerText =
+          currentSession.full_name.charAt(0);
+
+        // Hiển thị phần quản lý nếu là Admin
+        if (currentSession.role === "Admin") {
+          document.getElementById("admin-section").classList.remove("hidden");
+        }
+      });
+
+      // Form cập nhật hồ sơ cá nhân
+      document
+        .getElementById("profile-form")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const newName = document.getElementById("p-fullname").value;
+          const newPass = document.getElementById("p-password").value;
+
+          try {
+            const updateData = { full_name: newName };
+            if (newPass) updateData.password = newPass;
+
+            await db.users.update(currentSession.id, updateData);
+
+            // Cập nhật lại session trong localStorage
+            currentSession.full_name = newName;
+            localStorage.setItem(
+              "user_session",
+              JSON.stringify(currentSession),
+            );
+
+            alert("✅ Đã cập nhật thông tin cá nhân!");
+            location.reload();
+          } catch (err) {
+            alert("❌ Lỗi: " + err.message);
+          }
+        });
+
+      // Form Admin tạo nhân viên
+      document
+        .getElementById("admin-form")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const user = document.getElementById("a-username").value;
+          const pass = document.getElementById("a-password").value;
+          const name = document.getElementById("a-fullname").value;
+          const role = document.getElementById("a-role").value;
+
+          try {
+            const exist = await db.users.where("username").equals(user).first();
+            if (exist) {
+              alert("⚠️ Tên đăng nhập này đã có người sử dụng!");
+              return;
+            }
+
+            await db.users.add({
+              username: user,
+              password: pass,
+              full_name: name,
+              role: role,
+            });
+
+            alert(`🎉 Thành công! Đã cấp quyền ${role} cho ${name}`);
+            e.target.reset();
+          } catch (err) {
+            alert("❌ Lỗi hệ thống: " + err.message);
+          }
+        });
+    </script>
+  </body>
+</html>

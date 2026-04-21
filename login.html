@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Đăng nhập | Hệ thống Quản lý Nhà thuốc Nội bộ</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
+    <script src="database.js"></script>
     <link
       href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap"
       rel="stylesheet"
@@ -49,7 +51,7 @@
         </p>
       </div>
 
-      <form action="#" method="POST" class="space-y-6">
+      <form id="login-form" action="#" method="POST" class="space-y-6">
         <div>
           <label
             for="username"
@@ -114,5 +116,22 @@
         </p>
       </div>
     </div>
+
+    <script>
+      document
+        .getElementById("login-form")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault(); // Ngăn load lại trang
+          const user = document.getElementById("username").value;
+          const pass = document.getElementById("password").value;
+
+          const success = await AuthManager.login(user, pass);
+          if (success) {
+            window.location.href = "pos.html";
+          } else {
+            alert("Tên đăng nhập hoặc mật khẩu không chính xác!");
+          }
+        });
+    </script>
   </body>
 </html>
