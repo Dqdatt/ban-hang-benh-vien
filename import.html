@@ -239,8 +239,8 @@
               </h2>
             </div>
 
-            <div class="grid grid-cols-12 gap-3 items-end relative">
-              <div class="col-span-3 relative">
+            <div class="flex items-end gap-3 w-full">
+              <div class="flex-1 min-w-[100px]">
                 <label
                   class="block text-[9px] font-bold text-gray-800 uppercase tracking-wider mb-1 ml-1"
                   >Tên thuốc</label
@@ -250,7 +250,7 @@
                   id="input-name"
                   placeholder="Tìm tên hoặc nhập mới..."
                   autocomplete="off"
-                  class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-[13px] font-medium text-gray-700 uppercase bg-white placeholder:font-normal placeholder:text-[10px] placeholder:text-gray-300"
+                  class="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-[13px] font-medium text-gray-700 uppercase bg-white placeholder:font-normal placeholder:text-[10px] placeholder:text-gray-300"
                 />
                 <div
                   id="autocomplete-list"
@@ -258,7 +258,7 @@
                 ></div>
               </div>
 
-              <div class="col-span-1">
+              <div class="w-[100px]">
                 <label
                   class="block text-[9px] font-bold text-gray-800 uppercase tracking-wider mb-1 ml-1"
                   >ĐVT</label
@@ -266,11 +266,11 @@
                 <input
                   type="text"
                   id="input-unit"
-                  class="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-[13px] font-medium text-center text-gray-700 bg-white placeholder:font-normal placeholder:text-[10px] placeholder:text-gray-300"
+                  class="w-full px-1 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-[13px] font-medium text-center text-gray-700 bg-white placeholder:font-normal placeholder:text-[10px] placeholder:text-gray-300"
                 />
               </div>
 
-              <div class="col-span-1">
+              <div class="w-[100px]">
                 <label
                   class="block text-[9px] font-bold text-gray-800 uppercase tracking-wider mb-1 ml-1"
                   >Số lượng</label
@@ -280,11 +280,11 @@
                   id="input-qty"
                   value="1"
                   min="1"
-                  class="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-[13px] font-medium text-blue-600 text-center bg-white placeholder:font-normal placeholder:text-[10px] placeholder:text-gray-300"
+                  class="w-full px-1 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-[13px] font-medium text-blue-600 text-center bg-white placeholder:font-normal placeholder:text-[10px] placeholder:text-gray-300"
                 />
               </div>
 
-              <div class="col-span-2">
+              <div class="w-[170px]">
                 <label
                   class="block text-[9px] font-bold text-gray-800 uppercase tracking-wider mb-1 ml-1"
                   >Giá nhập</label
@@ -297,7 +297,20 @@
                 />
               </div>
 
-              <div class="col-span-3">
+              <div class="w-[170px]">
+                <label
+                  class="block text-[9px] font-bold text-gray-800 uppercase tracking-wider mb-1 ml-1"
+                  >Giá bán</label
+                >
+                <input
+                  type="text"
+                  id="input-sell"
+                  placeholder="VNĐ"
+                  class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-[13px] font-medium text-gray-800 text-right bg-white placeholder:font-normal placeholder:text-[10px] placeholder:text-gray-300"
+                />
+              </div>
+
+              <div class="w-[190px]">
                 <label
                   class="block text-[9px] font-bold text-gray-800 uppercase tracking-wider mb-1 ml-1"
                   >Công nợ</label
@@ -309,7 +322,7 @@
                 />
               </div>
 
-              <div class="col-span-2">
+              <div class="w-[150px]">
                 <button
                   onclick="handleImport()"
                   class="w-full bg-blue-600 text-white font-bold py-2.5 rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 uppercase text-[16px] tracking-widest active:scale-95"
@@ -352,6 +365,11 @@
                   <th
                     class="px-2 py-4 text-[10px] font-black text-gray-400 uppercase text-right w-32"
                   >
+                    Giá bán
+                  </th>
+                  <th
+                    class="px-2 py-4 text-[10px] font-black text-gray-400 uppercase text-right w-32"
+                  >
                     Thành tiền
                   </th>
                   <th
@@ -362,7 +380,7 @@
                   <th
                     class="px-2 py-4 text-[10px] font-black text-gray-400 uppercase"
                   >
-                    Ghi chú
+                    Công nợ
                   </th>
                 </tr>
               </thead>
@@ -503,11 +521,29 @@
       }
 
       function setupPriceFormatting() {
-        const priceInput = document.getElementById("input-price");
-        priceInput.addEventListener("input", (e) => {
+        const importPriceInput = document.getElementById("input-price");
+        const sellPriceInput = document.getElementById("input-sell");
+        const unitInput = document.getElementById("input-unit");
+
+        importPriceInput.addEventListener("input", (e) => {
           let value = e.target.value.replace(/[^0-9]/g, "");
           if (value) {
             e.target.value = parseInt(value).toLocaleString();
+          }
+        });
+
+        sellPriceInput.addEventListener("input", (e) => {
+          let value = e.target.value.replace(/[^0-9]/g, "");
+          if (value) {
+            e.target.value = parseInt(value).toLocaleString();
+          }
+        });
+
+        unitInput.addEventListener("input", (e) => {
+          let value = e.target.value;
+          if (value.length > 0) {
+            // Viết hoa chữ đầu và giữ nguyên các chữ sau
+            e.target.value = value.charAt(0).toUpperCase() + value.slice(1);
           }
         });
       }
@@ -516,13 +552,19 @@
         const name = document.getElementById("input-name").value.trim();
         const unit = document.getElementById("input-unit").value.trim();
         const qty = parseInt(document.getElementById("input-qty").value) || 0;
-        const priceStr = document
+        const importPriceStr = document
           .getElementById("input-price")
           .value.replace(/,/g, "");
-        const price = parseInt(priceStr) || 0;
+        const sellPriceStr = document
+          .getElementById("input-sell")
+          .value.replace(/,/g, "");
+
+        const imPrice = parseInt(importPriceStr) || 0;
+        const selPrice = parseInt(sellPriceStr) || 0;
+
         const note = document.getElementById("input-note").value;
 
-        if (!name || qty <= 0 || price <= 0)
+        if (!name || qty <= 0 || imPrice <= 0)
           return alert("Vui lòng điền đủ thông tin!");
 
         try {
@@ -532,7 +574,8 @@
             await db.products.update(existing.id, {
               stock: (existing.stock || 0) + qty,
               total_import: (existing.total_import || 0) + qty,
-              import_price: price,
+              import_price: imPrice,
+              sell_price: selPrice,
               type: unit,
             });
           } else {
@@ -543,8 +586,8 @@
               stock_initial: 0,
               total_import: qty,
               total_export: 0,
-              import_price: price,
-              sell_price: price * 1.2,
+              import_price: imPrice,
+              sell_price: selPrice,
               status: "Đủ hàng",
             });
           }
@@ -558,10 +601,11 @@
             name,
             unit,
             qty,
-            price,
+            imPrice: imPrice,
+            selPrice: selPrice,
             note,
             time: timeStr,
-            total: qty * price,
+            total: qty * imPrice,
             user_id: localStorage.getItem("currentUser"),
           });
 
@@ -574,6 +618,7 @@
           document.getElementById("input-unit").value = "";
           document.getElementById("input-qty").value = "1";
           document.getElementById("input-price").value = "";
+          document.getElementById("input-sell").value = "";
           document.getElementById("input-note").value = "";
           document.getElementById("input-name").focus();
         } catch (err) {
@@ -596,8 +641,9 @@
                     <td class="px-2 py-2.5 font-semibold text-gray-800 uppercase text-[11px]">${item.name}</td>
                     <td class="px-2 py-2.5 text-center text-gray-800 font-medium text-[11px]">${item.unit}</td>
                     <td class="px-2 py-2.5 text-center font-bold text-gray-800 text-[11px] bg-gray-50/50">${item.qty}</td>
-                    <td class="px-2 py-2.5 text-right font-medium text-gray-800 text-[11px]">${item.price.toLocaleString()}</td>
-                    <td class="px-2 py-2.5 text-right font-bold text-gray-800 text-[11px]">${item.total.toLocaleString()}đ</td>
+                    <td class="px-2 py-2.5 text-right font-medium text-gray-800 text-[11px]">${(item.imPrice || 0).toLocaleString()}</td>
+                    <td class="px-2 py-2.5 text-right font-medium text-gray-800 text-[11px]">${(item.selPrice || 0).toLocaleString()}</td>
+                    <td class="px-2 py-2.5 text-right font-bold text-gray-800 text-[11px]">${(item.total || 0).toLocaleString()}đ</td>
                     <td class="px-2 py-2.5 text-center text-gray-800 font-medium text-[11px] uppercase whitespace-nowrap">${item.time}</td>
                     <td class="px-4 py-2.5 text-[11px] italic text-gray-800 font-medium">${item.note || ""}</td>
                 </tr>

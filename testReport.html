@@ -327,7 +327,7 @@
                 </h3>
                 <span
                   id="total-medicines-count"
-                  class="px-4 py-1 bg-gray-100 rounded-full text-[10px] font-black text-gray-500 uppercase"
+                  class="px-4 py-3 bg-green-100 rounded-full text-[15px] font-black text-gray-500 uppercase"
                   >0 Loại</span
                 >
               </div>
@@ -382,7 +382,31 @@
           </div>
         </div>
 
-        <div id="tab-invoices" class="tab-content hidden">
+        <div id="tab-invoices" class="tab-content hidden space-y-4">
+          <div class="flex">
+            <div class="relative w-64">
+              <input
+                type="text"
+                id="invoice-search-input"
+                oninput="loadInvoices()"
+                placeholder="TÌM MÃ ĐƠN HÀNG..."
+                class="w-full bg-white border border-gray-100 px-4 py-2.5 rounded-2xl text-[10px] font-bold text-gray-800 uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-blue-100 shadow-sm transition-all"
+              />
+              <svg
+                class="w-4 h-4 text-gray-300 absolute right-4 top-2.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+            </div>
+          </div>
           <div
             class="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden"
           >
@@ -536,13 +560,24 @@
 
       // 4. LOGIC HÓA ĐƠN & CHI TIẾT
       async function loadInvoices() {
-        const orders = await db.orders
-          .orderBy("created_at")
-          .reverse()
-          .toArray();
-        document.getElementById("invoice-list-body").innerHTML = orders
-          .map(
-            (o, i) => `
+        const keyword =
+          document
+            .getElementById("invoice-search-input")
+            ?.value?.toUpperCase() || "";
+
+        let orders = await db.orders.orderBy("created_at").reverse().toArray();
+
+        // Lọc theo mã đơn nếu có keyword
+        if (keyword) {
+          orders = orders.filter((o) =>
+            o.order_id.toUpperCase().includes(keyword),
+          );
+        }
+
+        document.getElementById("invoice-list-body").innerHTML =
+          orders
+            .map(
+              (o, i) => `
           <tr class="hover:bg-gray-50/50 border-b border-gray-50 transition-all">
             <td class="px-6 py-4 text-[11px] font-medium text-gray-400 text-center">${i + 1}</td>
             <td class="px-6 py-4 text-[11px] font-medium text-gray-500">${new Date(o.created_at).toLocaleString()}</td>
@@ -557,8 +592,9 @@
               <button onclick="viewInvoice('${o.order_id}')" class="text-[10px] font-black text-gray-400 hover:text-blue-600 uppercase tracking-widest transition-colors">Chi tiết</button>
             </td>
           </tr>`,
-          )
-          .join("");
+            )
+            .join("") ||
+          '<tr><td colspan="6" class="p-12 text-[10px] text-gray-400 text-center font-bold uppercase italic">Không tìm thấy hóa đơn phù hợp</td></tr>';
       }
 
       async function viewInvoice(id) {

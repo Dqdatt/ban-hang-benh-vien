@@ -97,8 +97,8 @@ const orderManager = {
         return `
       <tr class="border-b border-gray-50 hover:bg-gray-50 transition-colors">
           <td class="px-3 py-4">
-              <p class="font-bold text-gray-700 uppercase text-[11px]">${item.name}</p>
-                <p class="text-[9px] text-gray-400 font-semibold italic">
+              <p class="font-bold text-gray-700 uppercase text-[12px]">${item.name}</p>
+                <p class="text-[10px] text-gray-400 font-semibold italic">
                  ${item.type || "Đơn vị"} | Tồn: <span class="${stockColorClass}">${stock}</span>
                 </p>
           </td>
@@ -347,42 +347,60 @@ const orderManager = {
 
   // Cập nhật hàm này trong pos.js
   async completeTransaction() {
-    console.log("Đang hoàn tất đơn hàng và trừ kho...");
     try {
-      // 1. Chạy vòng lặp trừ kho cho từng món trong giỏ
+      const session = JSON.parse(localStorage.getItem("user_session") || "{}");
+      const cashierName = session.full_name || "Nhân viên";
+      const totalAmount =
+        parseInt(
+          document
+            .getElementById("grand-total")
+            .innerText.replace(/[^0-9]/g, ""),
+        ) || 0;
+      const paymentType =
+        selectedPaymentMethod === "transfer" ? "Chuyển khoản" : "Tiền mặt";
+
+      // 1. LƯU HOÁ ĐƠN
+      await db.orders.add({
+        order_id: currentOrderId,
+        created_at: Date.now(),
+        user_id: cashierName,
+        total_amount: totalAmount,
+        payment_type: paymentType,
+      });
+
+      // 2. LƯU CHI TIẾT SẢN PHẨM
       for (const item of currentCart) {
-        const productId = Number(item.id);
-        const productFromDB = await db.products.get(productId);
+        await db.order_items.add({
+          order_id: currentOrderId,
+          product_id: Number(item.id),
+          quantity: Number(item.quantity),
+          price: Number(item.sell_price),
+        });
 
+        // 3. TRỪ KHO (LOGIC CŨ)
+        const productFromDB = await db.products.get(Number(item.id));
         if (productFromDB) {
-          const oldStock = Number(productFromDB.stock) || 0;
-          const oldExport = Number(productFromDB.total_export) || 0;
-          const soldQty = Number(item.quantity) || 0; // Lưu ý: dùng .quantity theo code của bạn
-
-          await db.products.update(productId, {
-            stock: oldStock - soldQty,
-            total_export: oldExport + soldQty,
+          await db.products.update(Number(item.id), {
+            stock: (productFromDB.stock || 0) - Number(item.quantity),
+            total_export:
+              (productFromDB.total_export || 0) + Number(item.quantity),
           });
         }
       }
 
-      // 2. Reset giỏ hàng và UI
+      // 4. RESET UI (LOGIC CŨ)
       currentCart = [];
       currentOrderId = null;
-      await this.loadInventory(); // Cập nhật số lượng mới lên màn hình
+      await this.loadInventory();
       this.renderCart();
-
-      // Đóng tất cả các Modal
       this.closePaymentModal();
-      if (document.getElementById("qr-modal")) {
+      if (document.getElementById("qr-modal"))
         document.getElementById("qr-modal").classList.add("hidden");
-      }
-
       const label = document.getElementById("order-id");
       if (label) label.innerText = "ĐỢI LỆNH";
     } catch (error) {
-      console.error("Lỗi workflow thanh toán:", error);
-      alert("Lỗi: Không thể cập nhật kho hàng!");
+      console.error("Lỗi:", error);
+      alert("Lỗi lưu đơn hàng!");
     }
   },
 };

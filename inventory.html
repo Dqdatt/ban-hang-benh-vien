@@ -302,12 +302,12 @@
                     Tồn Kho
                   </th>
                   <th
-                    class="px-2 py-2 text-[10px] font-black text-gray-400 uppercase text-center"
+                    class="px-2 py-2 text-[10px] font-black text-gray-400 uppercase text-right w-20"
                   >
                     Lợi Nhuận
                   </th>
                   <th
-                    class="px-2 py-2 text-[10px] font-black text-gray-400 uppercase"
+                    class="px-2 py-2 text-[10px] font-black text-gray-400 uppercase text-center"
                   >
                     Ghi chú
                   </th>
@@ -391,11 +391,11 @@
                     <span class="font-black text-red-500 text-[11px]">${item.stock || 0}</span>
                 </td>
                 
-                <td class="px-2 py-1.5 text-center font-black text-green-600 text-[11px]">
+                <td class="px-2 py-1.5 text-right font-black text-green-600 text-[11px]">
                     ${profit > 0 ? profit.toLocaleString() : "0"}đ
                 </td>
                 
-                <td class="px-2 py-1.5 text-[10px] italic text-gray-300 font-medium whitespace-nowrap">${item.note || ""}</td>
+                <td class="px-2 py-1.5 text-[11px] italic text-gray-300 font-medium whitespace-nowrap">${item.note || ""}</td>
             </tr>
         `;
             })
