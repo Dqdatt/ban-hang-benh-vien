@@ -236,6 +236,23 @@
                 0đ
               </p>
             </div>
+
+            <div
+              class="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm"
+            >
+              <p
+                class="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1"
+              >
+                Tổng chi phí khác
+              </p>
+              <p
+                id="total-other-costs-display"
+                class="text-3xl font-black text-orange-500"
+              >
+                0đ
+              </p>
+            </div>
+
             <div
               class="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm"
             >
@@ -387,13 +404,13 @@
         </div>
 
         <div id="tab-invoices" class="tab-content hidden space-y-4">
-          <div class="flex">
-            <div class="relative w-64">
+          <div class="flex justify-between items-center mb-4">
+            <div class="relative w-80">
               <input
                 type="text"
                 id="invoice-search-input"
                 oninput="loadInvoices()"
-                placeholder="TÌM MÃ ĐƠN HÀNG..."
+                placeholder="TÌM MÃ ĐƠN HOẶC TÊN KHÁCH..."
                 class="w-full bg-white border border-gray-100 px-4 py-2.5 rounded-2xl text-[10px] font-bold text-gray-800 uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-blue-100 shadow-sm transition-all"
               />
               <svg
@@ -410,6 +427,12 @@
                 />
               </svg>
             </div>
+            <button
+              onclick="openExportTransferModal()"
+              class="px-6 py-2.5 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all"
+            >
+              Xuất HĐ Chuyển khoản
+            </button>
           </div>
           <div
             class="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden"
@@ -431,6 +454,11 @@
                     class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase"
                   >
                     Mã đơn
+                  </th>
+                  <th
+                    class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase"
+                  >
+                    Tên khách
                   </th>
                   <th
                     class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase text-right"
@@ -528,6 +556,102 @@
         id="invoice-detail-content"
         class="bg-white rounded-2xl shadow-xl w-full max-w-xl overflow-hidden"
       ></div>
+    </div>
+
+    <div
+      id="export-transfer-modal"
+      class="fixed inset-0 z-[100] hidden bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4"
+    >
+      <div
+        class="bg-white rounded-3xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[80vh]"
+      >
+        <div
+          class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 shrink-0"
+        >
+          <h2
+            class="text-sm font-black text-gray-800 uppercase tracking-widest"
+          >
+            Hóa Đơn Chuyển Khoản Trong Ngày
+          </h2>
+          <button
+            onclick="closeExportTransferModal()"
+            class="text-gray-400 hover:text-gray-600"
+          >
+            <svg
+              class="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+        <div class="p-6 flex-1 overflow-y-auto custom-scrollbar">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-gray-50/50">
+                <th
+                  class="px-4 py-3 text-[10px] font-black text-gray-400 uppercase w-12 text-center"
+                >
+                  STT
+                </th>
+                <th
+                  class="px-4 py-3 text-[10px] font-black text-gray-400 uppercase"
+                >
+                  Thời gian
+                </th>
+                <th
+                  class="px-4 py-3 text-[10px] font-black text-gray-400 uppercase"
+                >
+                  Tên KH
+                </th>
+                <th
+                  class="px-4 py-3 text-[10px] font-black text-gray-400 uppercase text-right"
+                >
+                  Số tiền
+                </th>
+              </tr>
+            </thead>
+            <tbody id="export-transfer-body"></tbody>
+            <tfoot>
+              <tr class="border-t border-gray-100 bg-gray-50/30">
+                <td
+                  colspan="3"
+                  class="px-4 py-4 text-[11px] font-black text-gray-800 uppercase text-right"
+                >
+                  Tổng cộng:
+                </td>
+                <td
+                  class="px-4 py-4 text-[13px] font-black text-blue-600 text-right"
+                  id="export-transfer-total"
+                >
+                  0đ
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <div class="p-6 bg-white border-t border-gray-100 flex gap-3 shrink-0">
+          <button
+            onclick="printTransferReport()"
+            class="flex-1 bg-blue-600 text-white py-3 rounded-xl text-[10px] font-bold uppercase hover:bg-blue-700 shadow-lg shadow-blue-100 transition-all"
+          >
+            In Báo Cáo
+          </button>
+          <button
+            onclick="closeExportTransferModal()"
+            class="flex-1 bg-gray-100 text-gray-600 py-3 rounded-xl text-[10px] font-bold uppercase hover:bg-gray-200 transition-all"
+          >
+            Đóng
+          </button>
+        </div>
+      </div>
     </div>
 
     <div
@@ -898,6 +1022,66 @@
         if (tabName === "employees") loadEmployees();
       }
 
+      // ---------------- LOGIC XUẤT HĐ CHUYỂN KHOẢN ---------------- //
+      async function openExportTransferModal() {
+        try {
+          const todayStr = new Date().toDateString();
+          const orders = await db.orders
+            .orderBy("created_at")
+            .reverse()
+            .toArray();
+
+          const filteredOrders = orders.filter((o) => {
+            return (
+              new Date(o.created_at).toDateString() === todayStr &&
+              o.payment_type === "Chuyển khoản"
+            );
+          });
+
+          const tbody = document.getElementById("export-transfer-body");
+          let html = "";
+          let total = 0;
+
+          if (filteredOrders.length === 0) {
+            html = `<tr><td colspan="4" class="px-4 py-6 text-center text-[10px] text-gray-400 font-bold uppercase italic">Không có hóa đơn chuyển khoản nào trong ngày</td></tr>`;
+          } else {
+            filteredOrders.forEach((o, index) => {
+              const amt = Number(o.total_amount) || 0;
+              total += amt;
+              html += `
+                <tr class="border-b border-gray-50 hover:bg-gray-50/50">
+                  <td class="px-4 py-3 text-[10px] text-gray-400 font-bold text-center">${index + 1}</td>
+                  <td class="px-4 py-3 text-[11px] font-bold text-gray-700">${new Date(o.created_at).toLocaleTimeString()}</td>
+                  <td class="px-4 py-3 text-[11px] font-black text-gray-800 uppercase">${o.customer_name || "Khách lẻ"}</td>
+                  <td class="px-4 py-3 text-[11px] font-black text-blue-600 text-right">${amt.toLocaleString()}đ</td>
+                </tr>
+              `;
+            });
+          }
+
+          tbody.innerHTML = html;
+          document.getElementById("export-transfer-total").innerText =
+            total.toLocaleString() + "đ";
+
+          document
+            .getElementById("export-transfer-modal")
+            .classList.remove("hidden");
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      function closeExportTransferModal() {
+        document
+          .getElementById("export-transfer-modal")
+          .classList.add("hidden");
+      }
+
+      function printTransferReport() {
+        console.log("Đang in báo cáo chuyển khoản...");
+        alert("Đang kết nối máy in...");
+      }
+
       // ---------------- LOGIC NHÂN VIÊN ---------------- //
       async function loadEmployees() {
         try {
@@ -916,6 +1100,9 @@
             );
 
             userOrders.forEach((o) => {
+              // Đối với nhân sự tính doanh thu, ta vẫn có thể giữ nguyên tổng bill (o.total_amount)
+              // Hoặc nếu muốn trừ đi chi phí khác giống tổng quan, bạn có thể áp dụng tương tự.
+              // Ở đây giữ logic cũ cho bảng nhân sự.
               const amt = Number(o.total_amount) || 0;
               totalRev += amt;
               if (new Date(o.created_at).toDateString() === todayStr)
@@ -938,8 +1125,8 @@
                 <td class="px-6 py-4 text-right text-[11px] font-black text-blue-600">${dailyRev.toLocaleString()}đ</td>
                 <td class="px-6 py-4 text-right text-[11px] font-black text-gray-800">${totalRev.toLocaleString()}đ</td>
                 <td class="px-6 py-4 text-center flex justify-center gap-1">
-                  <button onclick="viewEmployeeDetail(${user.id})" class="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-[9px] font-black uppercase hover:bg-blue-100 transition-colors">Chi tiết</button>
-                  <button onclick="openEditEmployeeModal(${user.id})" class="px-3 py-1.5 bg-amber-50 text-amber-600 rounded-lg text-[9px] font-black uppercase hover:bg-amber-100 transition-colors">Sửa</button>
+                  <button onclick="viewEmployeeDetail('${user.id}')" class="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-[9px] font-black uppercase hover:bg-blue-100 transition-colors">Chi tiết</button>
+                  <button onclick="openEditEmployeeModal('${user.id}')" class="px-3 py-1.5 bg-amber-50 text-amber-600 rounded-lg text-[9px] font-black uppercase hover:bg-amber-100 transition-colors">Sửa</button>
                 </td>
               </tr>
             `;
@@ -988,25 +1175,29 @@
         loadEmployees();
       }
 
-      // --- LOGIC SỬA NHÂN VIÊN --- //
       async function openEditEmployeeModal(userId) {
-        const user = await db.users.get(userId);
-        if (!user) return;
+        try {
+          const parsedId = isNaN(Number(userId)) ? userId : Number(userId);
+          const user = await db.users.get(parsedId);
+          if (!user) return;
 
-        document.getElementById("edit-emp-id").value = user.id;
-        document.getElementById("edit-emp-code").value =
-          user.employee_code || "";
-        document.getElementById("edit-emp-name").value = user.full_name || "";
-        document.getElementById("edit-emp-role").value =
-          user.role || "Nhân viên";
-        document.getElementById("edit-emp-username").value =
-          user.username || "";
-        document.getElementById("edit-emp-password").value =
-          user.password || "";
+          document.getElementById("edit-emp-id").value = parsedId;
+          document.getElementById("edit-emp-code").value =
+            user.employee_code || "";
+          document.getElementById("edit-emp-name").value = user.full_name || "";
+          document.getElementById("edit-emp-role").value =
+            user.role || "Nhân viên";
+          document.getElementById("edit-emp-username").value =
+            user.username || "";
+          document.getElementById("edit-emp-password").value =
+            user.password || "";
 
-        document
-          .getElementById("edit-employee-modal")
-          .classList.remove("hidden");
+          document
+            .getElementById("edit-employee-modal")
+            .classList.remove("hidden");
+        } catch (e) {
+          console.error("Lỗi khi mở form sửa nhân viên:", e);
+        }
       }
 
       function closeEditEmployeeModal() {
@@ -1015,21 +1206,20 @@
 
       async function updateEmployee(e) {
         e.preventDefault();
-        const id = Number(document.getElementById("edit-emp-id").value);
+        const rawId = document.getElementById("edit-emp-id").value;
+        const id = isNaN(Number(rawId)) ? rawId : Number(rawId);
         const code = document.getElementById("edit-emp-code").value;
         const role = document.getElementById("edit-emp-role").value;
         const name = document.getElementById("edit-emp-name").value;
         const username = document.getElementById("edit-emp-username").value;
         const pass = document.getElementById("edit-emp-password").value;
 
-        // Kiểm tra xem username có bị trùng với user khác không
         const exist = await db.users.where("username").equals(username).first();
         if (exist && exist.id !== id) {
           alert("Tên đăng nhập đã tồn tại trên một tài khoản khác!");
           return;
         }
 
-        // Thực hiện update
         await db.users.update(id, {
           employee_code: code,
           role: role,
@@ -1039,50 +1229,67 @@
         });
 
         closeEditEmployeeModal();
-        loadEmployees(); // Load lại bảng
+        loadEmployees();
       }
 
       async function viewEmployeeDetail(userId) {
-        const user = await db.users.get(userId);
-        if (!user) return;
+        try {
+          const parsedId = isNaN(Number(userId)) ? userId : Number(userId);
+          const user = await db.users.get(parsedId);
+          if (!user) {
+            console.error("Không tìm thấy dữ liệu nhân viên");
+            return;
+          }
 
-        document.getElementById("detail-emp-code").innerText =
-          "Mã NV: " + (user.employee_code || "N/A");
-        document.getElementById("detail-emp-name").innerText = user.full_name;
-        document.getElementById("detail-emp-username").innerText =
-          user.username;
-        document.getElementById("detail-emp-role").innerText = user.role;
+          document.getElementById("detail-emp-code").innerText =
+            "Mã NV: " + (user.employee_code || "N/A");
+          document.getElementById("detail-emp-name").innerText = user.full_name;
+          document.getElementById("detail-emp-username").innerText =
+            user.username;
+          document.getElementById("detail-emp-role").innerText = user.role;
 
-        const history = await db.login_history
-          .where("user_id")
-          .equals(userId)
-          .reverse()
-          .toArray();
-        const tbody = document.getElementById("detail-emp-history");
+          let history = [];
+          const tbody = document.getElementById("detail-emp-history");
 
-        if (history.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="3" class="px-4 py-6 text-center text-[10px] text-gray-400 font-bold uppercase italic">Chưa có lịch sử đăng nhập</td></tr>`;
-        } else {
-          tbody.innerHTML = history
-            .map(
-              (h, i) => `
-            <tr class="border-b border-gray-50 hover:bg-gray-50/50">
-              <td class="px-4 py-3 text-[10px] text-gray-400 font-bold text-center">${i + 1}</td>
-              <td class="px-4 py-3 text-[11px] text-gray-700 font-bold">${new Date(h.timestamp).toLocaleString()}</td>
-              <td class="px-4 py-3 text-center">
-                <span class="px-2 py-1 rounded text-[9px] font-black uppercase ${h.action === "login" ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"}">
-                  ${h.action === "login" ? "ĐĂNG NHẬP (IN)" : "ĐĂNG XUẤT (OUT)"}
-                </span>
-              </td>
-            </tr>
-          `,
-            )
-            .join("");
+          try {
+            history = await db.login_history
+              .where("user_id")
+              .equals(parsedId)
+              .reverse()
+              .toArray();
+          } catch (err) {
+            console.warn(
+              "Chưa index lịch sử hoặc bảng không tồn tại, bỏ qua lấy lịch sử",
+              err,
+            );
+          }
+
+          if (history.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="3" class="px-4 py-6 text-center text-[10px] text-gray-400 font-bold uppercase italic">Chưa có lịch sử đăng nhập</td></tr>`;
+          } else {
+            tbody.innerHTML = history
+              .map(
+                (h, i) => `
+              <tr class="border-b border-gray-50 hover:bg-gray-50/50">
+                <td class="px-4 py-3 text-[10px] text-gray-400 font-bold text-center">${i + 1}</td>
+                <td class="px-4 py-3 text-[11px] text-gray-700 font-bold">${new Date(h.timestamp).toLocaleString()}</td>
+                <td class="px-4 py-3 text-center">
+                  <span class="px-2 py-1 rounded text-[9px] font-black uppercase ${h.action === "login" ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"}">
+                    ${h.action === "login" ? "ĐĂNG NHẬP (IN)" : "ĐĂNG XUẤT (OUT)"}
+                  </span>
+                </td>
+              </tr>
+            `,
+              )
+              .join("");
+          }
+
+          document
+            .getElementById("employee-detail-modal")
+            .classList.remove("hidden");
+        } catch (globalError) {
+          console.error("Lỗi kĩ thuật khi mở modal:", globalError);
         }
-
-        document
-          .getElementById("employee-detail-modal")
-          .classList.remove("hidden");
       }
 
       function closeEmployeeDetailModal() {
@@ -1091,7 +1298,7 @@
           .classList.add("hidden");
       }
 
-      // ---------------- LOGIC CŨ (BÁO CÁO) ---------------- //
+      // ---------------- LOGIC MỚI ĐÃ CẬP NHẬT (BÁO CÁO) ---------------- //
       async function updateDashboardStats() {
         try {
           const orders = await db.orders.toArray();
@@ -1099,27 +1306,37 @@
           const curD = now.getDate(),
             curM = now.getMonth(),
             curY = now.getFullYear();
+
           let totalRev = 0,
+            totalOther = 0, // Tính riêng chi phí khác
             revDay = 0,
             revMonth = 0,
             revYear = 0;
 
           orders.forEach((o) => {
             const amt = Number(o.total_amount) || 0;
+            const cost = Number(o.other_costs) || 0; // Trích xuất chi phí khác
+            const pureRev = amt - cost; // Doanh thu thuần không tính chi phí khác
+
+            totalRev += pureRev;
+            totalOther += cost;
+
             const d = new Date(o.created_at);
-            totalRev += amt;
             if (d.getFullYear() === curY) {
-              revYear += amt;
+              revYear += pureRev;
               if (d.getMonth() === curM) {
-                revMonth += amt;
-                if (d.getDate() === curD) revDay += amt;
+                revMonth += pureRev;
+                if (d.getDate() === curD) revDay += pureRev;
               }
             }
           });
 
           const fmt = (v) => v.toLocaleString() + "đ";
+
           document.getElementById("total-revenue-display").innerText =
             fmt(totalRev);
+          document.getElementById("total-other-costs-display").innerText =
+            fmt(totalOther); // Hiển thị chi phí khác
           document.getElementById("total-orders-count").innerText =
             `${orders.length} Đơn`;
           document.getElementById("revenue-day").innerText = fmt(revDay);
@@ -1171,8 +1388,11 @@
             ?.value?.toUpperCase() || "";
         let orders = await db.orders.orderBy("created_at").reverse().toArray();
         if (keyword)
-          orders = orders.filter((o) =>
-            o.order_id.toUpperCase().includes(keyword),
+          orders = orders.filter(
+            (o) =>
+              o.order_id.toUpperCase().includes(keyword) ||
+              (o.customer_name &&
+                o.customer_name.toUpperCase().includes(keyword)),
           );
 
         document.getElementById("invoice-list-body").innerHTML = orders
@@ -1182,6 +1402,7 @@
             <td class="px-6 py-4 text-[11px] font-medium text-gray-400 text-center">${i + 1}</td>
             <td class="px-6 py-4 text-[11px] font-medium text-gray-500">${new Date(o.created_at).toLocaleString()}</td>
             <td class="px-6 py-4 text-[11px] font-black text-gray-800 uppercase">${o.order_id}</td>
+            <td class="px-6 py-4 text-[11px] font-bold text-gray-700">${o.customer_name || "Khách lẻ"}</td>
             <td class="px-6 py-4 text-right text-[11px] font-black text-blue-600">${Number(o.total_amount).toLocaleString()}đ</td>
             <td class="px-6 py-4 text-center">
               <span class="px-3 py-1 ${o.payment_type === "Chuyển khoản" ? "bg-blue-50 text-blue-600" : "bg-gray-100 text-gray-600"} rounded-lg font-black text-[9px] uppercase tracking-tighter">
@@ -1214,8 +1435,8 @@
           <div class="p-6 border-b border-gray-100 bg-gray-50/50">
             <div class="flex justify-between items-start mb-4">
               <div>
-                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Mã hóa đơn</p>
-                <h2 class="text-xl font-black text-gray-800 uppercase">${order.order_id}</h2>
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Mã hóa đơn - Khách hàng</p>
+                <h2 class="text-xl font-black text-gray-800 uppercase">${order.order_id} <span class="mx-2 text-gray-300">|</span> <span class="text-blue-600">${order.customer_name || "Khách lẻ"}</span></h2>
               </div>
               <button onclick="closeInvoiceModal()" class="text-gray-400 hover:text-gray-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
             </div>
