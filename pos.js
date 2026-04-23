@@ -6,16 +6,6 @@ let currentCart = [];
 let currentOrderId = null;
 let selectedPaymentMethod = null;
 
-function playCashSound() {
-  const sound = document.getElementById("cash-sound");
-  if (sound) {
-    sound.currentTime = 0; // Phát lại từ đầu nếu bấm liên tục
-    sound
-      .play()
-      .catch((error) => console.log("Chưa thể phát âm thanh: ", error));
-  }
-}
-
 // Hàm load các thành phần UI từ file riêng
 async function loadComponents() {
   const components = ["payment.html", "qr.html"];
@@ -38,6 +28,7 @@ const orderManager = {
     // Tải dữ liệu từ database Dexie thay vì dùng mảng giả lập
     await this.loadInventory();
     this.setupSearch();
+    this.setupOtherCosts(); // THÊM MỚI: Gọi logic xử lý Chi phí khác
   },
 
   async loadInventory() {
@@ -62,6 +53,22 @@ const orderManager = {
       );
       this.renderInventory(filtered);
     });
+  },
+
+  // THÊM MỚI: Lắng nghe sự kiện nhập Chi phí khác để thêm dấu phẩy
+  setupOtherCosts() {
+    const otherCostsInput = document.getElementById("other-costs-input");
+    if (otherCostsInput) {
+      otherCostsInput.addEventListener("input", (e) => {
+        let rawValue = e.target.value.replace(/[^0-9]/g, "");
+        if (rawValue === "") {
+          e.target.value = "";
+        } else {
+          e.target.value = parseInt(rawValue, 10).toLocaleString("en-US"); // Tự động thêm dấu phẩy
+        }
+        this.renderCart(); // Gọi lại renderCart để cập nhật Tổng thu
+      });
+    }
   },
 
   generateOrderNumber() {
@@ -197,7 +204,17 @@ const orderManager = {
 
     const formattedTotal = total.toLocaleString() + "đ";
     document.getElementById("total-price").innerText = formattedTotal;
-    document.getElementById("grand-total").innerText = formattedTotal;
+
+    // THÊM MỚI: Cộng chi phí khác vào tổng thu
+    const otherCostsInput = document.getElementById("other-costs-input");
+    let otherCosts = 0;
+    if (otherCostsInput && otherCostsInput.value) {
+      otherCosts = parseInt(otherCostsInput.value.replace(/[^0-9]/g, "")) || 0;
+    }
+
+    const grandTotal = total + otherCosts;
+    document.getElementById("grand-total").innerText =
+      grandTotal.toLocaleString() + "đ";
   },
 
   removeItem(idx) {
@@ -210,6 +227,13 @@ const orderManager = {
     if (confirm("Bạn có chắc chắn muốn xóa đơn hàng này?")) {
       currentCart = [];
       currentOrderId = null;
+
+      // THÊM MỚI: Reset ô Tên khách hàng và Chi phí khác
+      const customerInput = document.getElementById("customer-name-input");
+      if (customerInput) customerInput.value = "";
+      const otherCostsInput = document.getElementById("other-costs-input");
+      if (otherCostsInput) otherCostsInput.value = "";
+
       this.renderCart();
       const label = document.getElementById("order-id");
       label.innerText = "ĐỢI LỆNH";
@@ -303,7 +327,6 @@ const orderManager = {
       this.openQRModal(soTien);
       this.lastOrderShouldPrint = shouldPrint;
     } else {
-      playCashSound();
       alert(shouldPrint ? "Đang in hóa đơn..." : "Đã thanh toán tiền mặt.");
       this.completeTransaction();
     }
@@ -313,13 +336,20 @@ const orderManager = {
     const qrImg = document.getElementById("qr-image");
     const qrLoading = document.getElementById("qr-loading");
 
+    // THÊM MỚI: Lấy Tên Khách Hàng và biến đổi khoảng trắng thành %20
+    const customerInput = document.getElementById("customer-name-input");
+    let rawName =
+      customerInput && customerInput.value.trim() !== ""
+        ? customerInput.value.trim()
+        : "KHACH HANG DEMO";
+    const tenKH = rawName.replace(/ /g, "%20");
+
     // Cấu hình link VietQR (Giữ nguyên cấu hình của bạn)
     const bankId = "970437";
     const accountNo = "045704070016757";
     const template = "compact2";
     const accountName = "BENH%20VIEN%20DA%20KHOA%20BUU%20DIEN";
     const description = "%20CK%20TIEN%20THUOC%20CS1";
-    const tenKH = "KHACH HANG DEMO".replace(/ /g, "%20");
 
     const qrCodeUrl = `https://img.vietqr.io/image/${bankId}-${accountNo}-${template}.png?amount=${soTien}&addInfo=${tenKH}${description}&accountName=${accountName}`;
 
@@ -340,7 +370,6 @@ const orderManager = {
   closeQRModal() {
     // Đóng modal QR
     document.getElementById("qr-modal").classList.add("hidden");
-    playCashSound();
 
     // Nếu trước đó người dùng chọn "In hóa đơn" rồi mới hiện QR
     if (this.lastOrderShouldPrint) {
@@ -371,11 +400,23 @@ const orderManager = {
       const paymentType =
         selectedPaymentMethod === "transfer" ? "Chuyển khoản" : "Tiền mặt";
 
+      // THÊM MỚI: Đọc giá trị để lưu vào database
+      const customerInput = document.getElementById("customer-name-input");
+      const customerName = customerInput ? customerInput.value.trim() : "";
+
+      const otherCostsInput = document.getElementById("other-costs-input");
+      const otherCosts =
+        otherCostsInput && otherCostsInput.value
+          ? parseInt(otherCostsInput.value.replace(/[^0-9]/g, ""))
+          : 0;
+
       // 1. LƯU HOÁ ĐƠN
       await db.orders.add({
         order_id: currentOrderId,
         created_at: Date.now(),
         user_id: cashierName,
+        customer_name: customerName, // Lưu thêm Tên KH
+        other_costs: otherCosts, // Lưu thêm Phí khác
         total_amount: totalAmount,
         payment_type: paymentType,
       });
@@ -400,9 +441,12 @@ const orderManager = {
         }
       }
 
-      // 4. RESET UI (LOGIC CŨ)
+      // 4. RESET UI (LOGIC CŨ KÈM XÓA INPUT)
       currentCart = [];
       currentOrderId = null;
+      if (customerInput) customerInput.value = "";
+      if (otherCostsInput) otherCostsInput.value = "";
+
       await this.loadInventory();
       this.renderCart();
       this.closePaymentModal();
