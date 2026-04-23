@@ -6,9 +6,16 @@
     <title>POS | PharmaOS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
+    <script src="database.js"></script>
+    <script src="pos.js"></script>
     <link
       href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap"
       rel="stylesheet"
+    />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%232563eb'><path d='M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-1 11h-4v4h-4v-4H6v-4h4V6h4v4h4v4z'/></svg>"
     />
     <style>
       body {
@@ -30,6 +37,7 @@
       }
     </style>
   </head>
+
   <body class="h-screen flex">
     <aside
       class="w-44 bg-white border-r border-gray-100 flex flex-col shadow-sm"
@@ -116,23 +124,56 @@
         </a>
       </nav>
 
-      <div class="p-4 border-t border-gray-50 mt-auto">
-        <div class="flex items-center gap-2">
+      <div class="p-4 border-t border-gray-50 mt-auto bg-white relative">
+        <div
+          id="user-menu-btn"
+          class="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 -mx-2 rounded-xl transition-colors"
+        >
           <div
+            id="user-avatar"
             class="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-sm"
-          >
-            D
-          </div>
-          <div class="min-w-0">
-            <p class="text-[9px] font-bold text-gray-800 truncate">
-              DOAN QUOC DAT
-            </p>
+          ></div>
+          <div class="min-w-0 flex-1">
             <p
-              class="text-[7px] font-semibold text-gray-400 uppercase tracking-tight"
-            >
-              Dược sĩ trực
-            </p>
+              id="user-name-display"
+              class="text-[9px] font-bold text-gray-800 truncate uppercase"
+            ></p>
+            <p
+              id="user-role-display"
+              class="text-[7px] font-semibold text-gray-400 uppercase tracking-tighter"
+            ></p>
           </div>
+          <svg
+            class="w-4 h-4 text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 9l-7 7-7-7"
+            />
+          </svg>
+        </div>
+
+        <div
+          id="user-dropdown"
+          class="hidden absolute bottom-[110%] left-4 right-4 bg-white border border-gray-100 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.08)] overflow-hidden z-50"
+        >
+          <a
+            href="info.html"
+            class="block w-full text-left px-4 py-3.5 text-[10px] font-bold text-gray-700 hover:bg-gray-50 uppercase border-b border-gray-50 transition-colors"
+          >
+            Thông tin
+          </a>
+          <button
+            onclick="AuthManager.logout()"
+            class="w-full text-left px-4 py-3.5 text-[10px] font-bold text-red-500 hover:bg-red-50 uppercase transition-colors"
+          >
+            Đăng xuất
+          </button>
         </div>
       </div>
     </aside>
@@ -259,4 +300,5 @@
     </main>
     <script src="pos.js"></script>
   </body>
+  <audio id="cash-sound" src="cash_1.mp3" preload="auto"></audio>
 </html>

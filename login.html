@@ -5,9 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Đăng nhập | Hệ thống Quản lý Nhà thuốc Nội bộ</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module" src="database.js"></script>
     <link
       href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap"
       rel="stylesheet"
+    />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%232563eb'><path d='M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-1 11h-4v4h-4v-4H6v-4h4V6h4v4h4v4z'/></svg>"
     />
     <style>
       body {
@@ -49,7 +55,7 @@
         </p>
       </div>
 
-      <form action="#" method="POST" class="space-y-6">
+      <form id="login-form" action="#" method="POST" class="space-y-6">
         <div>
           <label
             for="username"
@@ -114,5 +120,38 @@
         </p>
       </div>
     </div>
+
+    <script type="module">
+      async function startLogin() {
+        const form = document.getElementById("login-form");
+        if (!form) return;
+
+        form.addEventListener("submit", async (e) => {
+          e.preventDefault();
+
+          // Kiểm tra AuthManager từ database.js (đã được gán vào window)
+          if (!window.AuthManager) {
+            alert("Hệ thống đang khởi tạo, vui lòng thử lại sau 1 giây...");
+            return;
+          }
+
+          const user = document.getElementById("username").value;
+          const pass = document.getElementById("password").value;
+
+          try {
+            const success = await window.AuthManager.login(user, pass);
+            if (success) {
+              window.location.href = "pos.html";
+            } else {
+              alert("Sai tài khoản hoặc mật khẩu!");
+            }
+          } catch (err) {
+            console.error(err);
+            alert("Lỗi kết nối cơ sở dữ liệu!");
+          }
+        });
+      }
+      startLogin();
+    </script>
   </body>
 </html>

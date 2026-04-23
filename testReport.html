@@ -1,0 +1,717 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Báo cáo | PharmaOS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
+    <script src="database.js"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Montserrat", sans-serif;
+        background-color: #f8fafc;
+        overflow: hidden;
+      }
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 4px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #e2e8f0;
+        border-radius: 10px;
+      }
+      .sidebar-item.active {
+        background-color: #eff6ff;
+        color: #2563eb;
+        border-right: 3px solid #2563eb;
+      }
+    </style>
+  </head>
+  <body class="h-screen flex">
+    <aside
+      class="w-44 bg-white border-r border-gray-100 flex flex-col shadow-sm"
+    >
+      <div class="p-4 mb-2">
+        <div class="flex items-center gap-2 text-blue-600">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
+            />
+          </svg>
+          <span
+            class="font-extrabold tracking-tighter text-base text-gray-800 uppercase"
+            >Pharma<span class="text-blue-600">OS</span></span
+          >
+        </div>
+      </div>
+
+      <nav class="flex-1 space-y-1">
+        <a
+          href="pos.html"
+          class="sidebar-item w-full flex items-center gap-2.5 px-4 py-3.5 text-[10px] font-bold text-gray-400 hover:bg-gray-50 uppercase transition-all"
+        >
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+            />
+          </svg>
+          BÁN HÀNG
+        </a>
+        <a
+          href="inventory.html"
+          class="sidebar-item w-full flex items-center gap-2.5 px-4 py-3.5 text-[10px] font-bold text-gray-400 hover:bg-gray-50 uppercase transition-all"
+        >
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+            />
+          </svg>
+          KHO THUỐC
+        </a>
+        <a
+          href="reports.html"
+          class="sidebar-item active w-full flex items-center gap-2.5 px-4 py-3.5 text-[10px] font-bold text-blue-600 uppercase transition-all"
+        >
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
+          </svg>
+          BÁO CÁO
+        </a>
+      </nav>
+
+      <div class="p-4 border-t border-gray-50 mt-auto bg-white relative">
+        <div
+          id="user-menu-btn"
+          class="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 -mx-2 rounded-xl transition-colors"
+        >
+          <div
+            id="user-avatar"
+            class="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-sm"
+          ></div>
+          <div class="min-w-0 flex-1">
+            <p
+              id="user-name-display"
+              class="text-[9px] font-bold text-gray-800 truncate uppercase"
+            ></p>
+            <p
+              id="user-role-display"
+              class="text-[7px] font-semibold text-gray-400 uppercase tracking-tighter"
+            ></p>
+          </div>
+          <svg
+            class="w-4 h-4 text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 9l-7 7-7-7"
+            />
+          </svg>
+        </div>
+
+        <div
+          id="user-dropdown"
+          class="hidden absolute bottom-[110%] left-4 right-4 bg-white border border-gray-100 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.08)] overflow-hidden z-50"
+        >
+          <a
+            href="info.html"
+            class="block w-full text-left px-4 py-3.5 text-[10px] font-bold text-gray-700 hover:bg-gray-50 uppercase border-b border-gray-50 transition-colors"
+          >
+            Thông tin
+          </a>
+          <button
+            onclick="AuthManager.logout()"
+            class="w-full text-left px-4 py-3.5 text-[10px] font-bold text-red-500 hover:bg-red-50 uppercase transition-colors"
+          >
+            Đăng xuất
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col overflow-hidden">
+      <header
+        class="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-8 shrink-0"
+      >
+        <div class="flex items-center gap-4">
+          <h1
+            class="text-lg font-black text-gray-800 uppercase tracking-tighter"
+          >
+            Trung tâm dữ liệu
+          </h1>
+          <div class="h-4 w-[1px] bg-gray-200"></div>
+          <p
+            id="current-date"
+            class="text-[10px] font-bold text-gray-400 uppercase tracking-widest"
+          ></p>
+        </div>
+      </header>
+
+      <div class="flex-1 overflow-y-auto custom-scrollbar p-8">
+        <div class="flex gap-4 mb-8 bg-gray-100/50 p-1.5 rounded-[20px] w-fit">
+          <button
+            onclick="switchTab('overview')"
+            id="btn-overview"
+            class="tab-btn px-8 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all bg-white text-blue-600 shadow-sm"
+          >
+            Tổng quan
+          </button>
+          <button
+            onclick="switchTab('logistics')"
+            id="btn-logistics"
+            class="tab-btn px-8 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all text-gray-400 hover:text-gray-600"
+          >
+            Kho vận
+          </button>
+          <button
+            onclick="switchTab('invoices')"
+            id="btn-invoices"
+            class="tab-btn px-8 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all text-gray-400 hover:text-gray-600"
+          >
+            Hóa đơn
+          </button>
+        </div>
+
+        <div id="tab-overview" class="tab-content space-y-8">
+          <div class="grid grid-cols-4 gap-6">
+            <div
+              class="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm"
+            >
+              <p
+                class="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1"
+              >
+                Tổng doanh thu
+              </p>
+              <p
+                id="total-revenue-display"
+                class="text-3xl font-black text-blue-600"
+              >
+                0đ
+              </p>
+            </div>
+            <div
+              class="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm"
+            >
+              <p
+                class="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1"
+              >
+                Tổng hóa đơn
+              </p>
+              <p
+                id="total-orders-count"
+                class="text-3xl font-black text-gray-800"
+              >
+                0 Đơn
+              </p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-6">
+            <div
+              class="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden"
+            >
+              <div
+                class="p-4 bg-blue-50/50 border-b border-gray-50 flex items-center gap-2"
+              >
+                <div class="w-1 h-3 bg-blue-600 rounded-full"></div>
+                <h4
+                  class="text-[11px] font-black text-gray-800 uppercase tracking-widest"
+                >
+                  Doanh thu Ngày
+                </h4>
+              </div>
+              <div class="p-6 text-right">
+                <p id="revenue-day" class="text-3xl font-black text-blue-600">
+                  0đ
+                </p>
+              </div>
+            </div>
+            <div
+              class="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden"
+            >
+              <div
+                class="p-4 bg-purple-50/50 border-b border-gray-50 flex items-center gap-2"
+              >
+                <div class="w-1 h-3 bg-purple-600 rounded-full"></div>
+                <h4
+                  class="text-[11px] font-black text-gray-800 uppercase tracking-widest"
+                >
+                  Doanh thu Tháng
+                </h4>
+              </div>
+              <div class="p-6 text-right">
+                <p
+                  id="revenue-month"
+                  class="text-3xl font-black text-purple-600"
+                >
+                  0đ
+                </p>
+              </div>
+            </div>
+            <div
+              class="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden"
+            >
+              <div
+                class="p-4 bg-green-50/50 border-b border-gray-50 flex items-center gap-2"
+              >
+                <div class="w-1 h-3 bg-green-600 rounded-full"></div>
+                <h4
+                  class="text-[11px] font-black text-gray-800 uppercase tracking-widest"
+                >
+                  Doanh thu Năm
+                </h4>
+              </div>
+              <div class="p-6 text-right">
+                <p id="revenue-year" class="text-3xl font-black text-green-600">
+                  0đ
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="tab-logistics" class="tab-content hidden space-y-6">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div
+              class="md:col-span-2 bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden"
+            >
+              <div
+                class="p-6 border-b border-gray-50 flex justify-between items-center"
+              >
+                <h3
+                  class="font-black text-gray-800 uppercase text-sm tracking-widest"
+                >
+                  Toàn bộ kho hàng
+                </h3>
+                <span
+                  id="total-medicines-count"
+                  class="px-4 py-3 bg-green-100 rounded-full text-[15px] font-black text-gray-500 uppercase"
+                  >0 Loại</span
+                >
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                  <thead>
+                    <tr class="bg-gray-50/50">
+                      <th
+                        class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase text-center w-16"
+                      >
+                        STT
+                      </th>
+                      <th
+                        class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase"
+                      >
+                        Tên thuốc
+                      </th>
+                      <th
+                        class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase text-center"
+                      >
+                        Đơn vị
+                      </th>
+                      <th
+                        class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase text-right"
+                      >
+                        Tồn kho
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody id="inventory-table-body"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div
+              class="bg-white rounded-[32px] border border-red-100 shadow-sm overflow-hidden"
+            >
+              <div class="p-6 bg-red-50/50 border-b border-red-100">
+                <h3
+                  class="font-black text-red-600 uppercase text-sm tracking-widest flex items-center gap-2"
+                >
+                  <span
+                    class="w-2 h-2 bg-red-500 rounded-full animate-ping"
+                  ></span>
+                  Sắp hết hàng
+                </h3>
+              </div>
+              <table class="w-full text-left border-collapse">
+                <tbody id="low-stock-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div id="tab-invoices" class="tab-content hidden space-y-4">
+          <div class="flex">
+            <div class="relative w-64">
+              <input
+                type="text"
+                id="invoice-search-input"
+                oninput="loadInvoices()"
+                placeholder="TÌM MÃ ĐƠN HÀNG..."
+                class="w-full bg-white border border-gray-100 px-4 py-2.5 rounded-2xl text-[10px] font-bold text-gray-800 uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-blue-100 shadow-sm transition-all"
+              />
+              <svg
+                class="w-4 h-4 text-gray-300 absolute right-4 top-2.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+            </div>
+          </div>
+          <div
+            class="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden"
+          >
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-gray-50/50">
+                  <th
+                    class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase text-center w-16"
+                  >
+                    STT
+                  </th>
+                  <th
+                    class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase"
+                  >
+                    Ngày tạo
+                  </th>
+                  <th
+                    class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase"
+                  >
+                    Mã đơn
+                  </th>
+                  <th
+                    class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase text-right"
+                  >
+                    Tổng tiền
+                  </th>
+                  <th
+                    class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase text-center"
+                  >
+                    PTTT
+                  </th>
+                  <th
+                    class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase text-center"
+                  >
+                    Thao tác
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="invoice-list-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <div
+      id="invoice-detail-modal"
+      class="fixed inset-0 z-[100] hidden bg-gray-900/40 backdrop-blur-md flex items-center justify-center p-6"
+    >
+      <div
+        id="invoice-detail-content"
+        class="bg-white rounded-[40px] shadow-2xl w-full max-w-2xl overflow-hidden p-8 animate-in zoom-in duration-300"
+      ></div>
+    </div>
+
+    <script>
+      // 1. CHUYỂN TAB & KHỞI TẠO
+      function switchTab(tabName) {
+        document
+          .querySelectorAll(".tab-content")
+          .forEach((t) => t.classList.add("hidden"));
+        document.getElementById(`tab-${tabName}`).classList.remove("hidden");
+        document.querySelectorAll(".tab-btn").forEach((b) => {
+          b.classList.remove("bg-white", "text-blue-600", "shadow-sm");
+          b.classList.add("text-gray-400");
+        });
+        const activeBtn = document.getElementById(`btn-${tabName}`);
+        activeBtn.classList.add("bg-white", "text-blue-600", "shadow-sm");
+        activeBtn.classList.remove("text-gray-400");
+
+        if (tabName === "overview") updateDashboardStats();
+        if (tabName === "logistics") updateLogisticsTab();
+        if (tabName === "invoices") loadInvoices();
+      }
+
+      // 2. LOGIC THỐNG KÊ DOANH THU & ĐƠN HÀNG
+      async function updateDashboardStats() {
+        try {
+          const orders = await db.orders.toArray();
+          const now = new Date();
+          const curD = now.getDate(),
+            curM = now.getMonth(),
+            curY = now.getFullYear();
+
+          let totalRev = 0,
+            revDay = 0,
+            revMonth = 0,
+            revYear = 0;
+
+          orders.forEach((o) => {
+            const amt = Number(o.total_amount) || 0;
+            const d = new Date(o.created_at);
+            totalRev += amt;
+            if (d.getFullYear() === curY) {
+              revYear += amt;
+              if (d.getMonth() === curM) {
+                revMonth += amt;
+                if (d.getDate() === curD) revDay += amt;
+              }
+            }
+          });
+
+          const fmt = (v) => v.toLocaleString() + "đ";
+          document.getElementById("total-revenue-display").innerText =
+            fmt(totalRev);
+          document.getElementById("total-orders-count").innerText =
+            `${orders.length} Đơn`;
+          document.getElementById("revenue-day").innerText = fmt(revDay);
+          document.getElementById("revenue-month").innerText = fmt(revMonth);
+          document.getElementById("revenue-year").innerText = fmt(revYear);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      // 3. LOGIC KHO VẬN
+      async function updateLogisticsTab() {
+        try {
+          const prods = await db.products.toArray();
+          document.getElementById("total-medicines-count").innerText =
+            `${prods.length} Loại`;
+
+          document.getElementById("inventory-table-body").innerHTML = prods
+            .map(
+              (p, i) => `
+            <tr class="hover:bg-gray-50/50 border-b border-gray-50 transition-all">
+              <td class="px-6 py-2 text-[11px] font-medium text-gray-400 text-center">${i + 1}</td>
+              <td class="px-6 py-2 text-[11px] font-black text-gray-800 uppercase">${p.name}</td>
+              <td class="px-6 py-2 text-[11px] font-bold text-gray-600 text-center">${p.type}</td>
+              <td class="px-6 py-2 text-right"><span class="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg font-black text-[11px]">${p.stock || 0}</span></td>
+            </tr>`,
+            )
+            .join("");
+
+          const low = prods.filter((p) => (p.stock || 0) <= 5);
+          document.getElementById("low-stock-table-body").innerHTML = low.length
+            ? low
+                .map(
+                  (p) => `
+            <tr class="hover:bg-red-50/30 border-b border-gray-50 transition-all">
+              <td class="px-6 py-4 text-[11px] font-black text-gray-800 uppercase">${p.name}</td>
+              <td class="px-6 py-4 text-right"><span class="px-3 py-1 bg-red-50 text-red-600 rounded-lg font-black text-[11px]">${p.stock || 0}</span></td>
+            </tr>`,
+                )
+                .join("")
+            : '<tr><td class="p-6 text-[10px] text-gray-400 text-center font-bold uppercase italic">Kho hàng ổn định</td></tr>';
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      // 4. LOGIC HÓA ĐƠN & CHI TIẾT
+      async function loadInvoices() {
+        const keyword =
+          document
+            .getElementById("invoice-search-input")
+            ?.value?.toUpperCase() || "";
+
+        let orders = await db.orders.orderBy("created_at").reverse().toArray();
+
+        // Lọc theo mã đơn nếu có keyword
+        if (keyword) {
+          orders = orders.filter((o) =>
+            o.order_id.toUpperCase().includes(keyword),
+          );
+        }
+
+        document.getElementById("invoice-list-body").innerHTML =
+          orders
+            .map(
+              (o, i) => `
+          <tr class="hover:bg-gray-50/50 border-b border-gray-50 transition-all">
+            <td class="px-6 py-4 text-[11px] font-medium text-gray-400 text-center">${i + 1}</td>
+            <td class="px-6 py-4 text-[11px] font-medium text-gray-500">${new Date(o.created_at).toLocaleString()}</td>
+            <td class="px-6 py-4 text-[11px] font-black text-gray-800 uppercase">${o.order_id}</td>
+            <td class="px-6 py-4 text-right text-[11px] font-black text-blue-600">${Number(o.total_amount).toLocaleString()}đ</td>
+            <td class="px-6 py-4 text-center">
+              <span class="px-3 py-1 ${o.payment_type === "Chuyển khoản" ? "bg-blue-50 text-blue-600" : "bg-gray-100 text-gray-600"} rounded-lg font-black text-[9px] uppercase tracking-tighter">
+                ${o.payment_type || "Tiền mặt"}
+              </span>
+            </td>
+            <td class="px-6 py-4 text-center">
+              <button onclick="viewInvoice('${o.order_id}')" class="text-[10px] font-black text-gray-400 hover:text-blue-600 uppercase tracking-widest transition-colors">Chi tiết</button>
+            </td>
+          </tr>`,
+            )
+            .join("") ||
+          '<tr><td colspan="6" class="p-12 text-[10px] text-gray-400 text-center font-bold uppercase italic">Không tìm thấy hóa đơn phù hợp</td></tr>';
+      }
+
+      async function viewInvoice(id) {
+        const order = await db.orders.get(id);
+        const items = await db.order_items
+          .where("order_id")
+          .equals(id)
+          .toArray();
+
+        const modal = document.getElementById("invoice-detail-modal");
+        const content = document.getElementById("invoice-detail-content");
+
+        let itemsHtml = items
+          .map(
+            (it) => `
+          <div class="flex justify-between py-2 border-b border-gray-50">
+            <span class="text-[11px] font-bold text-gray-600 uppercase">${it.product_id} (x${it.quantity})</span>
+            <span class="text-[11px] font-black text-gray-800">${(it.price * it.quantity).toLocaleString()}đ</span>
+          </div>`,
+          )
+          .join("");
+
+        content.innerHTML = `
+          <div class="flex justify-between items-start mb-8">
+            <div>
+              <h2 class="text-2xl font-black text-gray-800 uppercase tracking-tighter">Chi tiết hóa đơn</h2>
+              <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">${order.order_id}</p>
+            </div>
+            <button onclick="closeInvoiceModal()" class="text-gray-300 hover:text-red-500 text-xl">✕</button>
+          </div>
+          <div class="space-y-1 mb-8 max-h-60 overflow-y-auto custom-scrollbar pr-2">${itemsHtml}</div>
+          <div class="flex justify-between items-center bg-gray-50 p-6 rounded-[24px] mb-8">
+            <span class="text-[11px] font-black text-gray-400 uppercase tracking-widest">Tổng thanh toán</span>
+            <span class="text-3xl font-black text-blue-600">${Number(order.total_amount).toLocaleString()}đ</span>
+          </div>
+          
+          <div class="flex gap-4">
+            ${
+              order.payment_type === "Chuyển khoản"
+                ? `
+            <button onclick="reOpenQR(${order.total_amount})" 
+                    class="flex-1 bg-blue-600 text-white py-5 rounded-2xl text-[13px] font-black uppercase shadow-xl shadow-blue-100 hover:bg-blue-700 active:scale-95 transition-all">
+                XEM MÃ QR
+            </button>`
+                : ""
+            }
+            <button onclick="closeInvoiceModal()" class="flex-1 bg-gray-100 text-gray-500 py-5 rounded-2xl text-[13px] font-black uppercase hover:bg-gray-200 transition-all">Đóng</button>
+          </div>
+        `;
+        modal.classList.remove("hidden");
+      }
+
+      function closeInvoiceModal() {
+        document.getElementById("invoice-detail-modal").classList.add("hidden");
+      }
+
+      // 5. POPUP QR (NHÚNG TRỰC TIẾP - MỜ NHẸ - KHÔNG NÚT XÁC NHẬN)
+      function reOpenQR(soTien) {
+        let qrModal = document.getElementById("re-qr-modal");
+        if (!qrModal) {
+          const modalHTML = `
+            <div id="re-qr-modal" class="fixed inset-0 z-[200] hidden bg-gray-900/40 backdrop-blur-md flex items-center justify-center p-6">
+              <div class="bg-white rounded-[48px] shadow-2xl w-full max-w-md overflow-hidden p-8 flex flex-col items-center animate-in zoom-in duration-300">
+                <h2 class="text-xl font-black text-gray-800 uppercase mb-2">Quét mã thanh toán</h2>
+                <p class="text-xs text-gray-400 font-bold mb-6 tracking-widest uppercase text-center">VietQR - Chuyển khoản 24/7</p>
+                <div class="relative w-full aspect-square bg-gray-50 rounded-[32px] border-4 border-blue-50 flex items-center justify-center overflow-hidden mb-6 shadow-inner">
+                  <img id="re-qr-image" src="" alt="VietQR" class="w-full h-full object-contain p-4 opacity-0 transition-opacity duration-300" />
+                  <div id="re-qr-loading" class="absolute inset-0 flex items-center justify-center bg-gray-50">
+                    <div class="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                </div>
+                <div class="text-center w-full bg-blue-50/50 py-5 rounded-2xl mb-4">
+                  <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Số tiền cần thu</p>
+                  <p id="re-qr-amount-display" class="text-3xl font-black text-blue-600">0đ</p>
+                </div>
+                <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest italic text-center opacity-50">Chạm vùng ngoài để đóng</p>
+              </div>
+            </div>`;
+          document.body.insertAdjacentHTML("beforeend", modalHTML);
+          qrModal = document.getElementById("re-qr-modal");
+        }
+
+        const qrImg = document.getElementById("re-qr-image"),
+          qrLoad = document.getElementById("re-qr-loading"),
+          qrAmt = document.getElementById("re-qr-amount-display");
+        const bankId = "970437",
+          accountNo = "045704070016757",
+          template = "compact2",
+          accountName = "BENH%20VIEN%20DA%20KHOA%20BUU%20DIEN",
+          description = "%20CK%20TIEN%20THUOC%20CS1",
+          tenKH = "KHACH%20HANG";
+
+        qrImg.classList.add("opacity-0");
+        qrLoad.classList.remove("hidden");
+        qrAmt.innerText = soTien.toLocaleString() + "đ";
+        qrImg.src = `https://img.vietqr.io/image/${bankId}-${accountNo}-${template}.png?amount=${soTien}&addInfo=${tenKH}${description}&accountName=${accountName}`;
+        qrImg.onload = () => {
+          qrImg.classList.replace("opacity-0", "opacity-100");
+          qrLoad.classList.add("hidden");
+        };
+
+        qrModal.classList.remove("hidden");
+        qrModal.onclick = (e) => {
+          if (e.target === qrModal) qrModal.classList.add("hidden");
+        };
+      }
+
+      window.addEventListener("DOMContentLoaded", () => {
+        document.getElementById("current-date").innerText =
+          new Date().toLocaleDateString("vi-VN", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          });
+        updateDashboardStats();
+      });
+    </script>
+  </body>
+</html>
