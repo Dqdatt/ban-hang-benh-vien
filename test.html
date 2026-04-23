@@ -531,6 +531,345 @@
         class="bg-white rounded-2xl shadow-xl w-full max-w-xl overflow-hidden"
       ></div>
     </div>
+
+    <div
+      id="add-employee-modal"
+      class="fixed inset-0 z-[100] hidden bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4"
+    >
+      <div
+        class="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden"
+      >
+        <div
+          class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50"
+        >
+          <h2
+            class="text-sm font-black text-gray-800 uppercase tracking-widest"
+          >
+            Thêm Nhân Viên Mới
+          </h2>
+          <button
+            onclick="closeAddEmployeeModal()"
+            class="text-gray-400 hover:text-gray-600"
+          >
+            <svg
+              class="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+        <form
+          id="add-employee-form"
+          onsubmit="saveEmployee(event)"
+          class="p-6 space-y-4"
+        >
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label
+                class="block text-[10px] font-bold text-gray-400 uppercase mb-1"
+                >Mã NV</label
+              >
+              <input
+                type="text"
+                id="emp-code"
+                required
+                class="w-full bg-gray-50 border border-gray-100 px-4 py-2.5 rounded-xl text-[11px] font-bold text-gray-800 uppercase focus:ring-2 focus:ring-blue-100 outline-none"
+                placeholder="VD: NV002"
+              />
+            </div>
+            <div>
+              <label
+                class="block text-[10px] font-bold text-gray-400 uppercase mb-1"
+                >Vai trò</label
+              >
+              <select
+                id="emp-role"
+                class="w-full bg-gray-50 border border-gray-100 px-4 py-2.5 rounded-xl text-[11px] font-bold text-gray-800 uppercase focus:ring-2 focus:ring-blue-100 outline-none"
+              >
+                <option value="Nhân viên">Nhân viên</option>
+                <option value="Admin">Admin</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label
+              class="block text-[10px] font-bold text-gray-400 uppercase mb-1"
+              >Họ và tên</label
+            >
+            <input
+              type="text"
+              id="emp-name"
+              required
+              class="w-full bg-gray-50 border border-gray-100 px-4 py-2.5 rounded-xl text-[11px] font-bold text-gray-800 uppercase focus:ring-2 focus:ring-blue-100 outline-none"
+            />
+          </div>
+          <div class="pt-4 border-t border-gray-50">
+            <h3 class="text-[10px] font-black text-gray-800 uppercase mb-3">
+              Thông tin tài khoản
+            </h3>
+            <div class="space-y-3">
+              <input
+                type="text"
+                id="emp-username"
+                required
+                placeholder="Tên đăng nhập"
+                class="w-full bg-gray-50 border border-gray-100 px-4 py-2.5 rounded-xl text-[11px] font-bold text-gray-800 focus:ring-2 focus:ring-blue-100 outline-none"
+              />
+              <input
+                type="password"
+                id="emp-password"
+                required
+                placeholder="Mật khẩu"
+                class="w-full bg-gray-50 border border-gray-100 px-4 py-2.5 rounded-xl text-[11px] font-bold text-gray-800 focus:ring-2 focus:ring-blue-100 outline-none"
+              />
+            </div>
+          </div>
+          <div class="flex gap-3 pt-4">
+            <button
+              type="submit"
+              class="flex-1 bg-blue-600 text-white py-3 rounded-xl text-[10px] font-bold uppercase hover:bg-blue-700 shadow-md"
+            >
+              Lưu nhân viên
+            </button>
+            <button
+              type="button"
+              onclick="closeAddEmployeeModal()"
+              class="flex-1 bg-gray-100 text-gray-600 py-3 rounded-xl text-[10px] font-bold uppercase hover:bg-gray-200"
+            >
+              Hủy
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div
+      id="edit-employee-modal"
+      class="fixed inset-0 z-[100] hidden bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4"
+    >
+      <div
+        class="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden"
+      >
+        <div
+          class="p-6 border-b border-gray-100 flex justify-between items-center bg-amber-50/50"
+        >
+          <h2
+            class="text-sm font-black text-gray-800 uppercase tracking-widest"
+          >
+            Sửa Nhân Viên
+          </h2>
+          <button
+            onclick="closeEditEmployeeModal()"
+            class="text-gray-400 hover:text-gray-600"
+          >
+            <svg
+              class="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+        <form
+          id="edit-employee-form"
+          onsubmit="updateEmployee(event)"
+          class="p-6 space-y-4"
+        >
+          <input type="hidden" id="edit-emp-id" />
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label
+                class="block text-[10px] font-bold text-gray-400 uppercase mb-1"
+                >Mã NV</label
+              >
+              <input
+                type="text"
+                id="edit-emp-code"
+                required
+                class="w-full bg-gray-50 border border-gray-100 px-4 py-2.5 rounded-xl text-[11px] font-bold text-gray-800 uppercase focus:ring-2 focus:ring-amber-100 outline-none"
+              />
+            </div>
+            <div>
+              <label
+                class="block text-[10px] font-bold text-gray-400 uppercase mb-1"
+                >Vai trò</label
+              >
+              <select
+                id="edit-emp-role"
+                class="w-full bg-gray-50 border border-gray-100 px-4 py-2.5 rounded-xl text-[11px] font-bold text-gray-800 uppercase focus:ring-2 focus:ring-amber-100 outline-none"
+              >
+                <option value="Nhân viên">Nhân viên</option>
+                <option value="Admin">Admin</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label
+              class="block text-[10px] font-bold text-gray-400 uppercase mb-1"
+              >Họ và tên</label
+            >
+            <input
+              type="text"
+              id="edit-emp-name"
+              required
+              class="w-full bg-gray-50 border border-gray-100 px-4 py-2.5 rounded-xl text-[11px] font-bold text-gray-800 uppercase focus:ring-2 focus:ring-amber-100 outline-none"
+            />
+          </div>
+          <div class="pt-4 border-t border-gray-50">
+            <h3 class="text-[10px] font-black text-gray-800 uppercase mb-3">
+              Thông tin tài khoản
+            </h3>
+            <div class="space-y-3">
+              <input
+                type="text"
+                id="edit-emp-username"
+                required
+                placeholder="Tên đăng nhập"
+                class="w-full bg-gray-50 border border-gray-100 px-4 py-2.5 rounded-xl text-[11px] font-bold text-gray-800 focus:ring-2 focus:ring-amber-100 outline-none"
+              />
+              <input
+                type="text"
+                id="edit-emp-password"
+                required
+                placeholder="Mật khẩu"
+                class="w-full bg-gray-50 border border-gray-100 px-4 py-2.5 rounded-xl text-[11px] font-bold text-gray-800 focus:ring-2 focus:ring-amber-100 outline-none"
+              />
+            </div>
+          </div>
+          <div class="flex gap-3 pt-4">
+            <button
+              type="submit"
+              class="flex-1 bg-amber-500 text-white py-3 rounded-xl text-[10px] font-bold uppercase hover:bg-amber-600 shadow-md transition-colors"
+            >
+              Cập nhật
+            </button>
+            <button
+              type="button"
+              onclick="closeEditEmployeeModal()"
+              class="flex-1 bg-gray-100 text-gray-600 py-3 rounded-xl text-[10px] font-bold uppercase hover:bg-gray-200 transition-colors"
+            >
+              Hủy
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div
+      id="employee-detail-modal"
+      class="fixed inset-0 z-[100] hidden bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4"
+    >
+      <div
+        class="bg-white rounded-3xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[80vh]"
+      >
+        <div
+          class="p-6 border-b border-gray-100 flex justify-between items-start bg-gray-50/50 shrink-0"
+        >
+          <div>
+            <p
+              id="detail-emp-code"
+              class="text-[10px] font-bold text-gray-400 uppercase tracking-widest"
+            ></p>
+            <h2
+              id="detail-emp-name"
+              class="text-xl font-black text-gray-800 uppercase mt-1"
+            ></h2>
+          </div>
+          <button
+            onclick="closeEmployeeDetailModal()"
+            class="text-gray-400 hover:text-gray-600"
+          >
+            <svg
+              class="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+
+        <div class="p-6 flex-1 overflow-y-auto custom-scrollbar space-y-6">
+          <div
+            class="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 flex items-center justify-between"
+          >
+            <div>
+              <p class="text-[10px] font-bold text-gray-500 uppercase">
+                Tài khoản cấp
+              </p>
+              <p
+                id="detail-emp-username"
+                class="text-sm font-black text-blue-600 mt-1"
+              ></p>
+            </div>
+            <div class="text-right">
+              <p class="text-[10px] font-bold text-gray-500 uppercase">
+                Phân quyền
+              </p>
+              <p
+                id="detail-emp-role"
+                class="text-xs font-black text-gray-800 uppercase mt-1"
+              ></p>
+            </div>
+          </div>
+
+          <div>
+            <h3
+              class="text-[11px] font-black text-gray-800 uppercase mb-3 flex items-center gap-2"
+            >
+              <div class="w-1.5 h-4 bg-gray-800 rounded-full"></div>
+              Lịch sử Đăng nhập / Đăng xuất
+            </h3>
+            <div class="border border-gray-100 rounded-2xl overflow-hidden">
+              <table class="w-full text-left border-collapse">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th
+                      class="px-4 py-3 text-[9px] font-bold text-gray-400 uppercase w-16 text-center"
+                    >
+                      STT
+                    </th>
+                    <th
+                      class="px-4 py-3 text-[9px] font-bold text-gray-400 uppercase"
+                    >
+                      Thời gian
+                    </th>
+                    <th
+                      class="px-4 py-3 text-[9px] font-bold text-gray-400 uppercase text-center"
+                    >
+                      Thao tác
+                    </th>
+                  </tr>
+                </thead>
+                <tbody id="detail-emp-history"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script>
       function checkAdminAccess() {
         const sessionStr = localStorage.getItem("user_session");
@@ -561,25 +900,207 @@
         if (tabName === "employees") loadEmployees();
       }
 
-      // --- LOGIC PHÂN QUYỀN DOANH THU (TRỌNG TÂM CẬP NHẬT) ---
+      // ---------------- LOGIC NHÂN VIÊN ---------------- //
+      async function loadEmployees() {
+        try {
+          const users = await db.users.toArray();
+          const orders = await db.orders.toArray();
+          const todayStr = new Date().toDateString();
+
+          const tbody = document.getElementById("employee-list-body");
+          let html = "";
+
+          users.forEach((user) => {
+            let totalRev = 0,
+              dailyRev = 0;
+            const userOrders = orders.filter(
+              (o) => o.user_id === user.username,
+            );
+
+            userOrders.forEach((o) => {
+              const amt = Number(o.total_amount) || 0;
+              totalRev += amt;
+              if (new Date(o.created_at).toDateString() === todayStr)
+                dailyRev += amt;
+            });
+
+            const statusLabel =
+              user.status === "online"
+                ? `<span class="flex items-center justify-center gap-1.5 text-green-600 font-black"><span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> ONLINE</span>`
+                : `<span class="text-gray-400 font-bold">OFFLINE</span>`;
+
+            html += `
+              <tr class="hover:bg-gray-50/50 border-b border-gray-50 transition-all">
+                <td class="px-6 py-4 text-[11px] font-black text-gray-500 uppercase">${user.employee_code || "N/A"}</td>
+                <td class="px-6 py-4 text-[11px] font-black text-gray-800 uppercase">${user.full_name}</td>
+                <td class="px-6 py-4 text-[10px] font-bold text-center">
+                  <span class="px-3 py-1 rounded-md ${user.role === "Admin" ? "bg-purple-50 text-purple-600" : "bg-gray-100 text-gray-600"} uppercase">${user.role}</span>
+                </td>
+                <td class="px-6 py-4 text-[9px] text-center">${statusLabel}</td>
+                <td class="px-6 py-4 text-right text-[11px] font-black text-blue-600">${dailyRev.toLocaleString()}đ</td>
+                <td class="px-6 py-4 text-right text-[11px] font-black text-gray-800">${totalRev.toLocaleString()}đ</td>
+                <td class="px-6 py-4 text-center flex justify-center gap-1">
+                  <button onclick="viewEmployeeDetail(${user.id})" class="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-[9px] font-black uppercase hover:bg-blue-100 transition-colors">Chi tiết</button>
+                  <button onclick="openEditEmployeeModal(${user.id})" class="px-3 py-1.5 bg-amber-50 text-amber-600 rounded-lg text-[9px] font-black uppercase hover:bg-amber-100 transition-colors">Sửa</button>
+                </td>
+              </tr>
+            `;
+          });
+          tbody.innerHTML = html;
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      function openAddEmployeeModal() {
+        document.getElementById("add-employee-form").reset();
+        document
+          .getElementById("add-employee-modal")
+          .classList.remove("hidden");
+      }
+
+      function closeAddEmployeeModal() {
+        document.getElementById("add-employee-modal").classList.add("hidden");
+      }
+
+      async function saveEmployee(e) {
+        e.preventDefault();
+        const code = document.getElementById("emp-code").value;
+        const role = document.getElementById("emp-role").value;
+        const name = document.getElementById("emp-name").value;
+        const username = document.getElementById("emp-username").value;
+        const pass = document.getElementById("emp-password").value;
+
+        const exist = await db.users.where("username").equals(username).first();
+        if (exist) {
+          alert("Tên đăng nhập đã tồn tại!");
+          return;
+        }
+
+        await db.users.add({
+          employee_code: code,
+          role: role,
+          full_name: name,
+          username: username,
+          password: pass,
+          status: "offline",
+        });
+
+        closeAddEmployeeModal();
+        loadEmployees();
+      }
+
+      // --- LOGIC SỬA NHÂN VIÊN --- //
+      async function openEditEmployeeModal(userId) {
+        const user = await db.users.get(userId);
+        if (!user) return;
+
+        document.getElementById("edit-emp-id").value = user.id;
+        document.getElementById("edit-emp-code").value =
+          user.employee_code || "";
+        document.getElementById("edit-emp-name").value = user.full_name || "";
+        document.getElementById("edit-emp-role").value =
+          user.role || "Nhân viên";
+        document.getElementById("edit-emp-username").value =
+          user.username || "";
+        document.getElementById("edit-emp-password").value =
+          user.password || "";
+
+        document
+          .getElementById("edit-employee-modal")
+          .classList.remove("hidden");
+      }
+
+      function closeEditEmployeeModal() {
+        document.getElementById("edit-employee-modal").classList.add("hidden");
+      }
+
+      async function updateEmployee(e) {
+        e.preventDefault();
+        const id = Number(document.getElementById("edit-emp-id").value);
+        const code = document.getElementById("edit-emp-code").value;
+        const role = document.getElementById("edit-emp-role").value;
+        const name = document.getElementById("edit-emp-name").value;
+        const username = document.getElementById("edit-emp-username").value;
+        const pass = document.getElementById("edit-emp-password").value;
+
+        // Kiểm tra xem username có bị trùng với user khác không
+        const exist = await db.users.where("username").equals(username).first();
+        if (exist && exist.id !== id) {
+          alert("Tên đăng nhập đã tồn tại trên một tài khoản khác!");
+          return;
+        }
+
+        // Thực hiện update
+        await db.users.update(id, {
+          employee_code: code,
+          role: role,
+          full_name: name,
+          username: username,
+          password: pass,
+        });
+
+        closeEditEmployeeModal();
+        loadEmployees(); // Load lại bảng
+      }
+
+      async function viewEmployeeDetail(userId) {
+        const user = await db.users.get(userId);
+        if (!user) return;
+
+        document.getElementById("detail-emp-code").innerText =
+          "Mã NV: " + (user.employee_code || "N/A");
+        document.getElementById("detail-emp-name").innerText = user.full_name;
+        document.getElementById("detail-emp-username").innerText =
+          user.username;
+        document.getElementById("detail-emp-role").innerText = user.role;
+
+        const history = await db.login_history
+          .where("user_id")
+          .equals(userId)
+          .reverse()
+          .toArray();
+        const tbody = document.getElementById("detail-emp-history");
+
+        if (history.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="3" class="px-4 py-6 text-center text-[10px] text-gray-400 font-bold uppercase italic">Chưa có lịch sử đăng nhập</td></tr>`;
+        } else {
+          tbody.innerHTML = history
+            .map(
+              (h, i) => `
+            <tr class="border-b border-gray-50 hover:bg-gray-50/50">
+              <td class="px-4 py-3 text-[10px] text-gray-400 font-bold text-center">${i + 1}</td>
+              <td class="px-4 py-3 text-[11px] text-gray-700 font-bold">${new Date(h.timestamp).toLocaleString()}</td>
+              <td class="px-4 py-3 text-center">
+                <span class="px-2 py-1 rounded text-[9px] font-black uppercase ${h.action === "login" ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"}">
+                  ${h.action === "login" ? "ĐĂNG NHẬP (IN)" : "ĐĂNG XUẤT (OUT)"}
+                </span>
+              </td>
+            </tr>
+          `,
+            )
+            .join("");
+        }
+
+        document
+          .getElementById("employee-detail-modal")
+          .classList.remove("hidden");
+      }
+
+      function closeEmployeeDetailModal() {
+        document
+          .getElementById("employee-detail-modal")
+          .classList.add("hidden");
+      }
+
+      // ---------------- LOGIC CŨ (BÁO CÁO) ---------------- //
       async function updateDashboardStats() {
         try {
-          const sessionStr = localStorage.getItem("user_session");
-          if (!sessionStr) return;
-          const session = JSON.parse(sessionStr);
-
-          let orders = await db.orders.toArray();
-
-          // NẾU LÀ NHÂN VIÊN: Chỉ lấy hóa đơn của chính mình
-          if (session.role !== "Admin") {
-            orders = orders.filter((o) => o.user_id === session.username);
-          }
-
+          const orders = await db.orders.toArray();
           const now = new Date();
           const curD = now.getDate(),
             curM = now.getMonth(),
             curY = now.getFullYear();
-
           let totalRev = 0,
             revDay = 0,
             revMonth = 0,
@@ -611,7 +1132,6 @@
         }
       }
 
-      // --- CÁC HÀM KHÁC GIỮ NGUYÊN ---
       async function updateLogisticsTab() {
         try {
           const prods = await db.products.toArray();
@@ -628,27 +1148,30 @@
             </tr>`,
             )
             .join("");
-          // ... (Low stock logic)
+
+          const low = prods.filter((p) => (p.stock || 0) <= 5);
+          document.getElementById("low-stock-table-body").innerHTML = low.length
+            ? low
+                .map(
+                  (p) => `
+            <tr class="hover:bg-red-50/30 border-b border-gray-50 transition-all">
+              <td class="px-6 py-4 text-[11px] font-black text-gray-800 uppercase">${p.name}</td>
+              <td class="px-6 py-4 text-right"><span class="px-3 py-1 bg-red-50 text-red-600 rounded-lg font-black text-[11px]">${p.stock || 0}</span></td>
+            </tr>`,
+                )
+                .join("")
+            : '<tr><td class="p-6 text-[10px] text-gray-400 text-center font-bold uppercase italic">Kho hàng ổn định</td></tr>';
         } catch (e) {
           console.error(e);
         }
       }
 
       async function loadInvoices() {
-        const sessionStr = localStorage.getItem("user_session");
-        const session = JSON.parse(sessionStr);
         const keyword =
           document
             .getElementById("invoice-search-input")
             ?.value?.toUpperCase() || "";
-
         let orders = await db.orders.orderBy("created_at").reverse().toArray();
-
-        // NHÂN VIÊN: Chỉ thấy hóa đơn của chính mình trong danh sách hóa đơn
-        if (session.role !== "Admin") {
-          orders = orders.filter((o) => o.user_id === session.username);
-        }
-
         if (keyword)
           orders = orders.filter((o) =>
             o.order_id.toUpperCase().includes(keyword),
@@ -663,7 +1186,9 @@
             <td class="px-6 py-4 text-[11px] font-black text-gray-800 uppercase">${o.order_id}</td>
             <td class="px-6 py-4 text-right text-[11px] font-black text-blue-600">${Number(o.total_amount).toLocaleString()}đ</td>
             <td class="px-6 py-4 text-center">
-              <span class="px-3 py-1 ${o.payment_type === "Chuyển khoản" ? "bg-blue-50 text-blue-600" : "bg-gray-100 text-gray-600"} rounded-lg font-black text-[9px] uppercase tracking-tighter">${o.payment_type || "Tiền mặt"}</span>
+              <span class="px-3 py-1 ${o.payment_type === "Chuyển khoản" ? "bg-blue-50 text-blue-600" : "bg-gray-100 text-gray-600"} rounded-lg font-black text-[9px] uppercase tracking-tighter">
+                ${o.payment_type || "Tiền mặt"}
+              </span>
             </td>
             <td class="px-6 py-4 text-center">
               <button onclick="viewInvoice('${o.order_id}')" class="text-[10px] font-black text-blue-600 uppercase hover:underline">Xem</button>
@@ -673,48 +1198,119 @@
           .join("");
       }
 
-      async function loadEmployees() {
-        // Logic hiển thị danh sách nhân viên cho Admin (giữ nguyên từ code cũ của bạn)
-        try {
-          const users = await db.users.toArray();
-          const orders = await db.orders.toArray();
-          const todayStr = new Date().toDateString();
-          const tbody = document.getElementById("employee-list-body");
-          let html = "";
-          users.forEach((user) => {
-            let totalRev = 0,
-              dailyRev = 0;
-            const userOrders = orders.filter(
-              (o) => o.user_id === user.username,
-            );
-            userOrders.forEach((o) => {
-              const amt = Number(o.total_amount) || 0;
-              totalRev += amt;
-              if (new Date(o.created_at).toDateString() === todayStr)
-                dailyRev += amt;
-            });
-            const statusLabel =
-              user.status === "online"
-                ? `<span class="flex items-center justify-center gap-1.5 text-green-600 font-black"><span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> ONLINE</span>`
-                : `<span class="text-gray-400 font-bold">OFFLINE</span>`;
-            html += `
-              <tr class="hover:bg-gray-50/50 border-b border-gray-50 transition-all">
-                <td class="px-6 py-4 text-[11px] font-black text-gray-500 uppercase">${user.employee_code || "N/A"}</td>
-                <td class="px-6 py-4 text-[11px] font-black text-gray-800 uppercase">${user.full_name}</td>
-                <td class="px-6 py-4 text-[10px] font-bold text-center"><span class="px-3 py-1 rounded-md ${user.role === "Admin" ? "bg-purple-50 text-purple-600" : "bg-gray-100 text-gray-600"} uppercase">${user.role}</span></td>
-                <td class="px-6 py-4 text-[9px] text-center">${statusLabel}</td>
-                <td class="px-6 py-4 text-right text-[11px] font-black text-blue-600">${dailyRev.toLocaleString()}đ</td>
-                <td class="px-6 py-4 text-right text-[11px] font-black text-gray-800">${totalRev.toLocaleString()}đ</td>
-                <td class="px-6 py-4 text-center flex justify-center gap-1">
-                  <button onclick="viewEmployeeDetail(${user.id})" class="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-[9px] font-black uppercase hover:bg-blue-100 transition-colors">Chi tiết</button>
-                  <button onclick="openEditEmployeeModal(${user.id})" class="px-3 py-1.5 bg-amber-50 text-amber-600 rounded-lg text-[9px] font-black uppercase hover:bg-amber-100 transition-colors">Sửa</button>
-                </td>
-              </tr>`;
-          });
-          tbody.innerHTML = html;
-        } catch (e) {
-          console.error(e);
+      async function viewInvoice(id) {
+        const order = await db.orders.get(id);
+        const items = await db.order_items
+          .where("order_id")
+          .equals(id)
+          .toArray();
+        for (let it of items) {
+          const product = await db.products.get(it.product_id);
+          it.display_name = product
+            ? product.name
+            : it.product_name || it.name || it.product_id;
         }
+
+        const content = document.getElementById("invoice-detail-content");
+        content.innerHTML = `
+          <div class="p-6 border-b border-gray-100 bg-gray-50/50">
+            <div class="flex justify-between items-start mb-4">
+              <div>
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Mã hóa đơn</p>
+                <h2 class="text-xl font-black text-gray-800 uppercase">${order.order_id}</h2>
+              </div>
+              <button onclick="closeInvoiceModal()" class="text-gray-400 hover:text-gray-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Người lập</p>
+                <p class="text-[11px] font-bold text-gray-700 uppercase">${order.user_id || "Hệ thống"}</p>
+              </div>
+              <div class="text-right">
+                <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Thời gian</p>
+                <p class="text-[11px] font-bold text-gray-700">${new Date(order.created_at).toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+          <div class="p-0 max-h-[300px] overflow-y-auto custom-scrollbar">
+            <table class="w-full text-left border-collapse">
+              <thead class="sticky top-0 bg-white shadow-sm">
+                <tr>
+                  <th class="px-6 py-3 text-[9px] font-bold text-gray-400 uppercase">Sản phẩm</th>
+                  <th class="px-4 py-3 text-[9px] font-bold text-gray-400 uppercase text-center">SL</th>
+                  <th class="px-6 py-3 text-[9px] font-bold text-gray-400 uppercase text-right">Thành tiền</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${items
+                  .map(
+                    (it) => `
+                  <tr class="border-b border-gray-50">
+                    <td class="px-6 py-3"><p class="text-[11px] font-bold text-gray-800 uppercase">${it.display_name}</p><p class="text-[9px] text-gray-400 italic">${Number(it.price).toLocaleString()}đ</p></td>
+                    <td class="px-4 py-3 text-[11px] font-bold text-gray-600 text-center">x${it.quantity}</td>
+                    <td class="px-6 py-3 text-[11px] font-bold text-gray-800 text-right">${(it.price * it.quantity).toLocaleString()}đ</td>
+                  </tr>`,
+                  )
+                  .join("")}
+              </tbody>
+            </table>
+          </div>
+          <div class="p-6 bg-white border-t border-gray-100">
+            <div class="flex justify-between items-center mb-6">
+              <div>
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tổng cộng</p>
+                <p class="text-[9px] text-blue-600 font-bold uppercase tracking-tighter italic">PTTT: ${order.payment_type || "Tiền mặt"}</p>
+              </div>
+              <p class="text-2xl font-black text-blue-600">${Number(order.total_amount).toLocaleString()}đ</p>
+            </div>
+            <div class="flex gap-3">
+              ${order.payment_type === "Chuyển khoản" ? `<button onclick="reOpenQR(${order.total_amount})" class="flex-1 bg-blue-600 text-white py-3 rounded-xl text-[10px] font-bold uppercase hover:bg-blue-700 transition-all shadow-lg shadow-blue-100">Xem mã QR</button>` : ""}
+              <button onclick="closeInvoiceModal()" class="flex-1 bg-gray-100 text-gray-600 py-3 rounded-xl text-[10px] font-bold uppercase hover:bg-gray-200 transition-all">Đóng</button>
+            </div>
+          </div>`;
+        document
+          .getElementById("invoice-detail-modal")
+          .classList.remove("hidden");
+      }
+
+      function closeInvoiceModal() {
+        document.getElementById("invoice-detail-modal").classList.add("hidden");
+      }
+
+      function reOpenQR(soTien) {
+        let qrModal = document.getElementById("re-qr-modal");
+        if (!qrModal) {
+          const html = `
+            <div id="re-qr-modal" class="fixed inset-0 z-[200] hidden bg-gray-900/40 backdrop-blur-md flex items-center justify-center p-6">
+              <div class="bg-white rounded-[40px] shadow-2xl w-full max-w-sm p-8 flex flex-col items-center">
+                <h2 class="text-sm font-black text-gray-800 uppercase mb-6 tracking-widest">Quét mã thanh toán</h2>
+                <div class="w-full aspect-square bg-gray-50 rounded-3xl mb-6 flex items-center justify-center border border-gray-100 overflow-hidden">
+                  <img id="re-qr-image" src="" class="w-full h-full object-contain p-4" />
+                </div>
+                <div class="text-center mb-6 w-full bg-blue-50 py-4 rounded-2xl">
+                  <p class="text-[10px] font-bold text-gray-400 uppercase mb-1">Số tiền thu</p>
+                  <p id="re-qr-amount" class="text-2xl font-black text-blue-600"></p>
+                </div>
+                <button onclick="document.getElementById('re-qr-modal').classList.add('hidden')" class="w-full py-3 bg-gray-100 text-gray-500 rounded-xl text-[10px] font-bold uppercase">Đóng</button>
+              </div>
+            </div>`;
+          document.body.insertAdjacentHTML("beforeend", html);
+          qrModal = document.getElementById("re-qr-modal");
+        }
+
+        const bankId = "970437",
+          accountNo = "045704070016757",
+          template = "compact2",
+          accountName = "BENH%20VIEN%20DA%20KHOA%20BUU%20DIEN",
+          description = "%20CK%20TIEN%20THUOC%20CS1";
+        document.getElementById("re-qr-amount").innerText =
+          soTien.toLocaleString() + "đ";
+        document.getElementById("re-qr-image").src =
+          `https://img.vietqr.io/image/${bankId}-${accountNo}-${template}.png?amount=${soTien}&addInfo=KHACH%20HANG${description}&accountName=${accountName}`;
+        qrModal.classList.remove("hidden");
+        qrModal.onclick = (e) => {
+          if (e.target === qrModal) qrModal.classList.add("hidden");
+        };
       }
 
       window.addEventListener("DOMContentLoaded", () => {
