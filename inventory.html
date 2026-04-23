@@ -11,6 +11,11 @@
       href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap"
       rel="stylesheet"
     />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%232563eb'><path d='M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-1 11h-4v4h-4v-4H6v-4h4V6h4v4h4v4z'/></svg>"
+    />
     <style>
       body {
         font-family: "Montserrat", sans-serif;
@@ -333,14 +338,32 @@
         }
       }
 
-      // Gọi hàm khi trang web tải xong
       document.addEventListener("DOMContentLoaded", async () => {
-        // Kiểm tra login
         if (typeof AuthManager !== "undefined") AuthManager.checkSession();
-
-        // Render danh sách và tổng lợi nhuận
         renderTotalInventory();
       });
+
+      // Hàm xử lý cập nhật giá bán mới
+      async function updateSellPrice(id, currentPrice, name) {
+        const newPrice = prompt(
+          `Cập nhật giá bán cho: ${name.toUpperCase()}`,
+          currentPrice,
+        );
+
+        if (newPrice !== null && newPrice.trim() !== "") {
+          const parsedPrice = parseInt(newPrice.replace(/[^0-9]/g, ""));
+          if (!isNaN(parsedPrice)) {
+            try {
+              await db.products.update(id, { sell_price: parsedPrice });
+              renderTotalInventory();
+            } catch (error) {
+              console.error("Lỗi khi cập nhật giá:", error);
+            }
+          } else {
+            alert("Vui lòng nhập số hợp lệ!");
+          }
+        }
+      }
 
       async function renderTotalInventory() {
         const list = document.getElementById("inventory-tbody");
@@ -350,7 +373,6 @@
         if (!list) return;
 
         try {
-          // Lấy tất cả sản phẩm từ Database
           const products = await db.products.toArray();
 
           if (products.length === 0) {
@@ -359,17 +381,15 @@
             return;
           }
 
-          let totalAllProfit = 0; // Biến tích lũy tổng lợi nhuận toàn kho
+          let totalAllProfit = 0;
 
           list.innerHTML = products
             .map((item, index) => {
-              // Tính lợi nhuận: (Giá bán - Giá nhập) * Tổng đã xuất
               const importPrice = item.import_price || 0;
               const sellPrice = item.sell_price || 0;
               const exported = item.total_export || 0;
               const profit = (sellPrice - importPrice) * exported;
 
-              // Cộng dồn vào tổng chung
               totalAllProfit += profit;
 
               return `
@@ -381,7 +401,21 @@
                 <td class="px-2 py-1.5 text-center text-gray-800 font-medium text-[11px]">${item.type || "---"}</td>
                 
                 <td class="px-2 py-1.5 text-right font-medium text-gray-800 text-[11px]">${importPrice.toLocaleString()}</td>
-                <td class="px-2 py-1.5 text-right font-bold text-blue-600 text-[11px]">${sellPrice.toLocaleString()}</td>
+                
+                <td class="px-2 py-1.5 text-right font-bold text-blue-600 text-[11px]">
+                    <div class="flex items-center justify-end gap-1.5">
+                        <span>${sellPrice.toLocaleString()}</span>
+                        <button 
+                            onclick="updateSellPrice(${item.id}, ${sellPrice}, '${item.name}')"
+                            class="p-1 bg-blue-50 hover:bg-blue-100 rounded-md text-blue-500 transition-colors shadow-sm"
+                            title="Sửa giá bán"
+                        >
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                            </svg>
+                        </button>
+                    </div>
+                </td>
                 
                 <td class="px-2 py-1.5 text-center font-medium text-gray-800 text-[11px]">${item.stock_initial || 0}</td>
                 <td class="px-2 py-1.5 text-center font-bold text-green-500 text-[11px]">${item.total_import || 0}</td>
@@ -401,7 +435,6 @@
             })
             .join("");
 
-          // Cập nhật con số tổng lợi nhuận lên UI
           if (totalProfitDisplay) {
             totalProfitDisplay.innerText = totalAllProfit.toLocaleString();
           }

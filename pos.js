@@ -6,6 +6,16 @@ let currentCart = [];
 let currentOrderId = null;
 let selectedPaymentMethod = null;
 
+function playCashSound() {
+  const sound = document.getElementById("cash-sound");
+  if (sound) {
+    sound.currentTime = 0; // Phát lại từ đầu nếu bấm liên tục
+    sound
+      .play()
+      .catch((error) => console.log("Chưa thể phát âm thanh: ", error));
+  }
+}
+
 // Hàm load các thành phần UI từ file riêng
 async function loadComponents() {
   const components = ["payment.html", "qr.html"];
@@ -293,6 +303,7 @@ const orderManager = {
       this.openQRModal(soTien);
       this.lastOrderShouldPrint = shouldPrint;
     } else {
+      playCashSound();
       alert(shouldPrint ? "Đang in hóa đơn..." : "Đã thanh toán tiền mặt.");
       this.completeTransaction();
     }
@@ -329,6 +340,7 @@ const orderManager = {
   closeQRModal() {
     // Đóng modal QR
     document.getElementById("qr-modal").classList.add("hidden");
+    playCashSound();
 
     // Nếu trước đó người dùng chọn "In hóa đơn" rồi mới hiện QR
     if (this.lastOrderShouldPrint) {

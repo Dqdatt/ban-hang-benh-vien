@@ -3,13 +3,15 @@
  */
 const db = new Dexie("PharmaOS_DB");
 
-db.version(1).stores({
-  users: "++id, username, password, full_name, role",
+// DB version 2: Bảng login_history và các trường nhân sự
+db.version(2).stores({
+  users: "++id, username, password, full_name, role, employee_code, status",
   products:
     "++id, name, type, import_price, sell_price, stock_initial, total_export, total_import, stock, status",
   orders: "order_id, created_at, user_id, total_amount, payment_type",
   order_items: "++id, order_id, product_id, quantity, price",
   import_history: "++id, name, time, user_id",
+  login_history: "++id, user_id, action, timestamp",
 });
 
 const AuthManager = {
@@ -17,21 +19,43 @@ const AuthManager = {
   async login(username, password) {
     const user = await db.users.where("username").equals(username).first();
     if (user && user.password === password) {
+      const now = new Date().getTime();
       const session = {
         id: user.id,
         username: user.username,
         full_name: user.full_name,
         role: user.role,
-        loginTime: new Date().getTime(),
+        loginTime: now,
       };
       localStorage.setItem("user_session", JSON.stringify(session));
+
+      // Cập nhật trạng thái và lưu lịch sử
+      await db.users.update(user.id, { status: "online" });
+      await db.login_history.add({
+        user_id: user.id,
+        action: "login",
+        timestamp: now,
+      });
+
       return true;
     }
     return false;
   },
 
   // Đăng xuất và xóa session
-  logout() {
+  async logout() {
+    const sessionStr = localStorage.getItem("user_session");
+    if (sessionStr) {
+      const session = JSON.parse(sessionStr);
+      // Cập nhật trạng thái và lưu lịch sử
+      await db.users.update(session.id, { status: "offline" });
+      await db.login_history.add({
+        user_id: session.id,
+        action: "logout",
+        timestamp: new Date().getTime(),
+      });
+    }
+
     localStorage.removeItem("user_session");
     window.location.href = "login.html";
   },
@@ -61,8 +85,7 @@ const AuthManager = {
       window.location.href = "pos.html";
     }
 
-    // 3. TỰ ĐỘNG ĐIỀN THÔNG TIN USER VÀO SIDEBAR (Dùng cho mọi trang)
-    // Dùng setTimeout để đảm bảo HTML đã load xong các thẻ ID
+    // 3. TỰ ĐỘNG ĐIỀN THÔNG TIN USER VÀO SIDEBAR
     setTimeout(() => {
       const nameEl = document.getElementById("user-name-display");
       const roleEl = document.getElementById("user-role-display");
@@ -73,14 +96,12 @@ const AuthManager = {
       if (avatarEl)
         avatarEl.innerText = session.full_name.charAt(0).toUpperCase();
 
-      // Kích hoạt menu dropdown nếu có
       this.setupUIListeners();
     }, 50);
 
     return session;
   },
 
-  // Hàm này giúp nút Avatar có thể click được ở bất kỳ trang nào
   setupUIListeners() {
     const menuBtn = document.getElementById("user-menu-btn");
     const dropdown = document.getElementById("user-dropdown");
@@ -96,21 +117,19 @@ const AuthManager = {
   },
 };
 
-// Khởi tạo dữ liệu mẫu
-// Tìm đoạn db.on("ready") ở cuối file database.js và thay thế:
 db.on("ready", async () => {
   const userCount = await db.users.count();
   if (userCount === 0) {
     console.log("Database trống, đang nạp dữ liệu mẫu...");
-    // Nạp User admin mặc định
     await db.users.add({
       username: "admin",
       password: "123",
-      full_name: "Dat Doan",
+      full_name: "Admin System",
       role: "Admin",
+      employee_code: "NV001",
+      status: "offline",
     });
 
-    // Nạp Products mẫu (Chỉ nạp khi thực sự trống)
     await db.products.bulkAdd([
       {
         name: "Amoxicillin 500mg",
@@ -127,7 +146,6 @@ db.on("ready", async () => {
     ]);
   }
 
-  // TỰ ĐỘNG CẬP NHẬT SIDEBAR SAU KHI DB READY
   const sessionStr = localStorage.getItem("user_session");
   if (sessionStr) {
     const session = JSON.parse(sessionStr);
@@ -141,20 +159,13 @@ db.on("ready", async () => {
       if (avatarEl) avatarEl.innerText = user.full_name.charAt(0).toUpperCase();
     }
   }
-
-  const menuBtn = document.getElementById("user-menu-btn");
-  const dropdown = document.getElementById("user-dropdown");
-  if (menuBtn && dropdown) {
-    menuBtn.onclick = (e) => {
-      e.stopPropagation();
-      dropdown.classList.toggle("hidden");
-    };
-  }
 });
 
-// Chạy luồng Auth ngay khi load file
+async function initDB() {
+  await db.open();
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   initDB();
-  const activeSession = AuthManager.checkSession();
-  AuthManager.initSidebarUI(activeSession);
+  AuthManager.checkSession();
 });
