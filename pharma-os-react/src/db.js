@@ -1,19 +1,166 @@
-import Dexie from "dexie";
+import { initializeApp } from "firebase/app";
+import {
+  getFirestore,
+  collection,
+  getDocs,
+  getDoc,
+  doc,
+  setDoc,
+  updateDoc,
+  query,
+  where,
+  limit,
+} from "firebase/firestore";
 
-export const db = new Dexie("PharmaOS_DB");
+// === 1. ĐIỀN THÔNG TIN FIREBASE CỦA BẠN VÀO ĐÂY ===
+const firebaseConfig = {
+  apiKey: "AIzaSyC3BIjyI9STChrd8Gc5XIyQg7VfepyJyHo",
+  authDomain: "banhangbenhvien-5b6ad.firebaseapp.com",
+  databaseURL: "https://banhangbenhvien-5b6ad-default-rtdb.firebaseio.com",
+  projectId: "banhangbenhvien-5b6ad",
+  storageBucket: "banhangbenhvien-5b6ad.firebasestorage.app",
+  messagingSenderId: "520295843269",
+  appId: "1:520295843269:web:021efd5a533e76e404f7ac",
+  measurementId: "G-4J0646WKHC",
+};
 
-db.version(2).stores({
-  users: "++id, username, password, full_name, role, employee_code, status",
-  products:
-    "++id, name, type, import_price, sell_price, stock_initial, total_export, total_import, stock, status, note",
-  orders:
-    "order_id, created_at, user_id, customer_name, other_costs, total_amount, payment_type",
-  order_items: "++id, order_id, product_id, quantity, price",
-  import_history:
-    "++id, name, unit, qty, imPrice, selPrice, total, note, time, user_id",
-  login_history: "++id, user_id, action, timestamp",
-});
+const app = initializeApp(firebaseConfig);
+const firestoreDb = getFirestore(app);
 
+// === 2. GIẢ LẬP DEXIE API ĐỂ KHÔNG PHẢI SỬA CÁC FILE KHÁC ===
+class DexieToFirebaseWrapper {
+  constructor(collectionName) {
+    this.name = collectionName;
+    this.colRef = collection(firestoreDb, collectionName);
+  }
+
+  // Chuyển Data thành mảng, tự động parse ID sang số để khớp logic cũ
+  async toArray() {
+    const snap = await getDocs(this.colRef);
+    return snap.docs.map((d) => ({ ...d.data(), id: Number(d.id) || d.id }));
+  }
+
+  // Tạo ID tự tăng giống ++id của Dexie
+  async _getNextId() {
+    const snap = await getDocs(this.colRef);
+    if (snap.empty) return 1;
+    let maxId = 0;
+    snap.forEach((doc) => {
+      const currentId = Number(doc.id);
+      if (!isNaN(currentId) && currentId > maxId) maxId = currentId;
+    });
+    return maxId + 1;
+  }
+
+  async add(data) {
+    const nextId = await this._getNextId();
+    const docRef = doc(firestoreDb, this.name, String(nextId));
+    await setDoc(docRef, { ...data, id: nextId });
+    return nextId;
+  }
+
+  async bulkAdd(arr) {
+    for (const item of arr) {
+      await this.add(item);
+    }
+  }
+
+  async get(id) {
+    const docRef = doc(firestoreDb, this.name, String(id));
+    const snap = await getDoc(docRef);
+    return snap.exists() ? { ...snap.data(), id: Number(snap.id) } : undefined;
+  }
+
+  async update(id, data) {
+    const docRef = doc(firestoreDb, this.name, String(id));
+    await updateDoc(docRef, data);
+    return 1;
+  }
+
+  async count() {
+    const snap = await getDocs(this.colRef);
+    return snap.size;
+  }
+
+  // Giả lập các câu lệnh query chuỗi (chaining) của Dexie
+  where(field) {
+    const self = this;
+    return {
+      equals: (val) => ({
+        first: async () => {
+          const q = query(self.colRef, where(field, "==", val), limit(1));
+          const snap = await getDocs(q);
+          if (snap.empty) return undefined;
+          return { ...snap.docs[0].data(), id: Number(snap.docs[0].id) };
+        },
+        toArray: async () => {
+          const q = query(self.colRef, where(field, "==", val));
+          const snap = await getDocs(q);
+          return snap.docs.map((d) => ({ ...d.data(), id: Number(d.id) }));
+        },
+        reverse: () => ({
+          toArray: async () => {
+            const q = query(self.colRef, where(field, "==", val));
+            const snap = await getDocs(q);
+            const results = snap.docs.map((d) => ({
+              ...d.data(),
+              id: Number(d.id),
+            }));
+            return results.reverse();
+          },
+        }),
+      }),
+    };
+  }
+
+  orderBy(field) {
+    const self = this;
+    return {
+      reverse: () => ({
+        toArray: async () => {
+          // Kéo về và sort bằng JS để tránh lỗi thiếu Index trên Firebase
+          const snap = await getDocs(self.colRef);
+          let results = snap.docs.map((d) => ({
+            ...d.data(),
+            id: Number(d.id),
+          }));
+          results.sort((a, b) => (b[field] > a[field] ? 1 : -1));
+          return results;
+        },
+        limit: (num) => ({
+          toArray: async () => {
+            const snap = await getDocs(self.colRef);
+            let results = snap.docs.map((d) => ({
+              ...d.data(),
+              id: Number(d.id),
+            }));
+            results.sort((a, b) => (b[field] > a[field] ? 1 : -1));
+            return results.slice(0, num);
+          },
+        }),
+      }),
+    };
+  }
+}
+
+// === 3. XUẤT CÁC BẢNG DỮ LIỆU NHƯ CŨ ===
+export const db = {
+  users: new DexieToFirebaseWrapper("users"),
+  products: new DexieToFirebaseWrapper("products"),
+  orders: new DexieToFirebaseWrapper("orders"),
+  order_items: new DexieToFirebaseWrapper("order_items"),
+  import_history: new DexieToFirebaseWrapper("import_history"),
+  login_history: new DexieToFirebaseWrapper("login_history"),
+
+  // Giả lập hàm trigger on("ready") để chạy data seeding mẫu
+  on: (event, callback) => {
+    if (event === "ready") {
+      setTimeout(callback, 2000);
+    }
+  },
+};
+
+// === 4. AUTH MANAGER - Giữ nguyên 100% logic của bạn ===
 export const AuthManager = {
   async login(username, password) {
     const user = await db.users.where("username").equals(username).first();
@@ -49,10 +196,9 @@ export const AuthManager = {
       });
     }
     localStorage.removeItem("user_session");
-    window.location.reload(); // Reload lại React App thay vì trỏ tới login.html
+    window.location.reload();
   },
 
-  // Đã bỏ các đoạn chuyển hướng window.location gây trắng trang
   checkSession() {
     const sessionStr = localStorage.getItem("user_session");
     if (!sessionStr) return null;
@@ -67,7 +213,7 @@ export const AuthManager = {
   },
 };
 
-// Seeding: Nạp dữ liệu mẫu
+// === 5. SEEDING DỮ LIỆU MẪU - Giữ nguyên logic cũ ===
 db.on("ready", async () => {
   const userCount = await db.users.count();
   if (userCount === 0) {
