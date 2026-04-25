@@ -7,6 +7,7 @@ import {
   doc,
   setDoc,
   updateDoc,
+  deleteDoc,
   query,
   where,
   limit,
@@ -74,6 +75,12 @@ class DexieToFirebaseWrapper {
   async update(id, data) {
     const docRef = doc(firestoreDb, this.name, String(id));
     await updateDoc(docRef, data);
+    return 1;
+  }
+
+  async delete(id) {
+    const docRef = doc(firestoreDb, this.name, String(id));
+    await deleteDoc(docRef);
     return 1;
   }
 

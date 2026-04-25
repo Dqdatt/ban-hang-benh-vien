@@ -24,6 +24,14 @@ function App() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
 
+  // === STATES CHO THÔNG TIN NGÂN HÀNG (VIETQR) ===
+  const [bankInfo, setBankInfo] = useState({
+    bankId: "970437",
+    accountNo: "045704070016757",
+    accountName: "BENH VIEN DA KHOA BUU DIEN",
+    description: " CK TIEN THUOC CS1",
+  });
+
   // STATE: QUẢN LÝ SỐ LƯỢNG NHẬP Ở BẢNG CHỌN THUỐC
   const [inputQuantities, setInputQuantities] = useState({});
 
@@ -64,8 +72,23 @@ function App() {
         setIsAuthenticated(false);
       }
       setIsAuthChecking(false);
+
+      // Tải cấu hình ngân hàng từ localStorage
+      const savedBankInfo = localStorage.getItem("bank_info");
+      if (savedBankInfo) {
+        setBankInfo(JSON.parse(savedBankInfo));
+      }
     };
     initApp();
+
+    // Lắng nghe sự thay đổi của bank_info từ tab khác (tab Reports)
+    const handleStorageChange = (e) => {
+      if (e.key === "bank_info" && e.newValue) {
+        setBankInfo(JSON.parse(e.newValue));
+      }
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
   useEffect(() => {
@@ -74,12 +97,56 @@ function App() {
     }
   }, [currentView, isAuthenticated]);
 
+  // === HÀM HỖ TRỢ TẠO LINK QR ĐỘNG ===
+  const formatQRText = (str) => {
+    if (!str) return "";
+    let result = str.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // Bỏ dấu tiếng Việt
+    result = result.replace(/đ/g, "d").replace(/Đ/g, "D"); // Sửa lỗi chữ Đ
+    result = result.toUpperCase(); // In hoa
+    result = result.replace(/\s+/g, "%20"); // Thay space = %20
+    return result;
+  };
+
   // === ÂM THANH ===
   const playCashSound = () => {
     // Đảm bảo file cash_1.mp3 nằm trong thư mục public
     const audio = new Audio("/cash_1.mp3");
     audio.play().catch((e) => console.log("Không thể phát âm thanh:", e));
   };
+
+  const getDynamicQRUrl = (amount) => {
+    const formattedAccountName = formatQRText(bankInfo.accountName);
+    const formattedDescription = formatQRText(bankInfo.description);
+    const safeDesc = formattedDescription.startsWith("%20")
+      ? formattedDescription
+      : `%20${formattedDescription}`;
+    const formattedCustomer = formatQRText(customerName || "KHACH HANG");
+
+    return `https://img.vietqr.io/image/${bankInfo.bankId}-${bankInfo.accountNo}-compact2.png?amount=${amount}&addInfo=${formattedCustomer}${safeDesc}&accountName=${formattedAccountName}`;
+  };
+
+  // === LOGIC ĐỒNG BỘ MÀN HÌNH KHÁCH ===
+  useEffect(() => {
+    const finalTotal =
+      typeof calculateTotal === "function" ? calculateTotal() : 0;
+
+    const syncData = {
+      // Ép kiểu Number để hiển thị đúng số lượng và thành tiền
+      cart: cart.map((item) => ({
+        name: item.name,
+        qty: Number(item.quantity) || 0, // <--- SỬA item.qty THÀNH item.quantity Ở DÒNG NÀY
+        sell_price: Number(item.sell_price) || 0,
+        type: item.type || "",
+      })),
+      total: finalTotal,
+      isQRModalOpen: isQRModalOpen || false,
+      qrUrl: getDynamicQRUrl(finalTotal),
+    };
+
+    localStorage.setItem("pos_customer_sync", JSON.stringify(syncData));
+    // Kích hoạt sự kiện để màn hình khách cập nhật tức thì
+    window.dispatchEvent(new Event("storage"));
+  }, [cart, isQRModalOpen, otherCosts]);
 
   // === 2. LOGIC POS ===
   const generateOrderNumber = () => {
@@ -187,8 +254,9 @@ function App() {
 
   const completeTransaction = async (shouldPrint = false) => {
     try {
-      // Gọi âm thanh ngay khi ấn xác nhận thanh toán thành công
-      playCashSound();
+      if (typeof playCashSound === "function") {
+        playCashSound();
+      }
 
       const sessionStr = localStorage.getItem("user_session");
       let cashierName = "Nhân viên";
@@ -407,6 +475,32 @@ function App() {
                 />
               </svg>{" "}
               BÁO CÁO
+            </button>
+
+            <button
+              onClick={() =>
+                window.open(
+                  window.location.origin + "?customer_screen=true",
+                  "_blank",
+                )
+              }
+              className="w-full mt-2 flex items-center gap-3 px-4 py-3 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-all font-bold border border-indigo-100"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                />
+              </svg>
+              Màn hình khách
             </button>
           </nav>
 
@@ -780,7 +874,7 @@ function App() {
             </p>
             <div className="relative w-full aspect-square bg-gray-50 rounded-[32px] border-4 border-blue-50 flex items-center justify-center overflow-hidden mb-6 shadow-inner">
               <img
-                src={`https://img.vietqr.io/image/970437-045704070016757-compact2.png?amount=${calculateTotal()}&addInfo=${(customerName || "KHACH HANG").replace(/ /g, "%20")}%20CK%20TIEN%20THUOC%20CS1&accountName=BENH%20VIEN%20DA%20KHOA%20BUU%20DIEN`}
+                src={getDynamicQRUrl(calculateTotal())}
                 alt="VietQR"
                 className="w-full h-full object-contain p-4"
                 onLoad={(e) => {

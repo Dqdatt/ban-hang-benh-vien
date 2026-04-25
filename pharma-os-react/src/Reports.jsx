@@ -3,7 +3,7 @@ import { db } from "./db";
 
 export default function Reports() {
   // === QUẢN LÝ TABS VÀ QUYỀN ===
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("overview"); // overview | logistics | invoices | employees | info
   const [isAdmin, setIsAdmin] = useState(false);
 
   // === STATES CHO DỮ LIỆU ===
@@ -45,6 +45,16 @@ export default function Reports() {
   });
   const [empDetail, setEmpDetail] = useState(null);
   const [empHistory, setEmpHistory] = useState([]);
+
+  // === STATES CHO TAB THÔNG TIN (VIETQR) ===
+  const [bankList, setBankList] = useState([]);
+  const [bankInfo, setBankInfo] = useState({
+    bankId: "970437", // Default: HDBank
+    accountNo: "045704070016757",
+    accountName: "Bệnh viện đa khoa bưu điện", // Nhập bình thường
+    description: " CK TIEN THUOC CS1", // Nhập bình thường
+  });
+  const [testQrUrl, setTestQrUrl] = useState("");
 
   // === TẢI DỮ LIỆU TỔNG QUAN ===
   const loadData = async () => {
@@ -109,6 +119,20 @@ export default function Reports() {
 
   useEffect(() => {
     loadData();
+
+    // Fetch Bank List từ API VietQR
+    fetch("https://api.vietqr.io/v2/banks")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.code === "00") setBankList(data.data);
+      })
+      .catch((err) => console.error("Lỗi tải danh sách ngân hàng:", err));
+
+    // Load cấu hình Bank từ localStorage (nếu có)
+    const savedBankInfo = localStorage.getItem("bank_info");
+    if (savedBankInfo) {
+      setBankInfo(JSON.parse(savedBankInfo));
+    }
   }, []);
 
   // === LOGIC TAB HÓA ĐƠN ===
@@ -134,6 +158,32 @@ export default function Reports() {
       setIsInvoiceModalOpen(true);
     } catch (error) {
       console.error(error);
+    }
+  };
+
+  const handleDeleteInvoice = async (order) => {
+    if (
+      !window.confirm(
+        `Bạn có chắc chắn muốn xóa hóa đơn ${order.order_id}?\nHành động này không thể hoàn tác.`,
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const items = await db.order_items
+        .where("order_id")
+        .equals(order.order_id)
+        .toArray();
+      for (let it of items) {
+        await db.order_items.delete(it.id);
+      }
+      await db.orders.delete(order.id);
+      alert("Đã xóa hóa đơn thành công!");
+      loadData();
+    } catch (error) {
+      console.error("Lỗi khi xóa hóa đơn:", error);
+      alert("Đã xảy ra lỗi khi xóa hóa đơn!");
     }
   };
 
@@ -214,6 +264,40 @@ export default function Reports() {
     setIsEmpDetailModalOpen(true);
   };
 
+  // === LOGIC TAB THÔNG TIN (VIETQR) ===
+  const formatQRText = (str) => {
+    if (!str) return "";
+    let result = str.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // Bỏ dấu
+    result = result.replace(/đ/g, "d").replace(/Đ/g, "D"); // Fix chữ Đ
+    result = result.toUpperCase(); // In hoa
+    result = result.replace(/\s+/g, "%20"); // Thay space = %20
+    return result;
+  };
+
+  const handleSaveBankInfo = () => {
+    // 1. Lưu cấu hình gốc (có dấu, chữ thường) vào localStorage để dùng toàn cục
+    localStorage.setItem("bank_info", JSON.stringify(bankInfo));
+
+    // 2. Chuyển đổi định dạng cho QR
+    const formattedAccountName = formatQRText(bankInfo.accountName);
+    const formattedDescription = formatQRText(bankInfo.description);
+
+    // Đảm bảo description có khoảng trắng (nếu chưa có) để tách tên khách hàng
+    const safeDesc = formattedDescription.startsWith("%20")
+      ? formattedDescription
+      : `%20${formattedDescription}`;
+
+    const soTien = "1234567";
+    const tenKH = "KHACH%20HANG%20TEST";
+    const template = "compact2";
+
+    // 3. Sinh URL mẫu
+    const url = `https://img.vietqr.io/image/${bankInfo.bankId}-${bankInfo.accountNo}-${template}.png?amount=${soTien}&addInfo=${tenKH}${safeDesc}&accountName=${formattedAccountName}`;
+
+    setTestQrUrl(url);
+    alert("Cập nhật thông tin thanh toán thành công!");
+  };
+
   return (
     <main className="flex-1 flex flex-col overflow-hidden relative">
       {/* HEADER BÁO CÁO */}
@@ -256,12 +340,20 @@ export default function Reports() {
             Hóa đơn
           </button>
           {isAdmin && (
-            <button
-              onClick={() => setActiveTab("employees")}
-              className={`px-8 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === "employees" ? "bg-white text-blue-600 shadow-sm" : "text-gray-400 hover:text-gray-600"}`}
-            >
-              Nhân sự
-            </button>
+            <>
+              <button
+                onClick={() => setActiveTab("employees")}
+                className={`px-8 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === "employees" ? "bg-white text-blue-600 shadow-sm" : "text-gray-400 hover:text-gray-600"}`}
+              >
+                Nhân sự
+              </button>
+              <button
+                onClick={() => setActiveTab("info")}
+                className={`px-8 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === "info" ? "bg-white text-blue-600 shadow-sm" : "text-gray-400 hover:text-gray-600"}`}
+              >
+                Thông tin
+              </button>
+            </>
           )}
         </div>
 
@@ -528,12 +620,22 @@ export default function Reports() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <button
-                          onClick={() => viewInvoice(o)}
-                          className="text-[10px] font-black text-blue-600 uppercase hover:underline"
-                        >
-                          Xem
-                        </button>
+                        <div className="flex items-center justify-center gap-3">
+                          <button
+                            onClick={() => viewInvoice(o)}
+                            className="text-[10px] font-black text-blue-600 uppercase hover:underline"
+                          >
+                            Xem
+                          </button>
+                          {isAdmin && (
+                            <button
+                              onClick={() => handleDeleteInvoice(o)}
+                              className="text-[10px] font-black text-red-500 uppercase hover:underline"
+                            >
+                              Xóa
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -666,6 +768,123 @@ export default function Reports() {
                     })}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ================= TAB 5: THÔNG TIN (VIETQR) ================= */}
+        {activeTab === "info" && isAdmin && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <h2 className="text-sm font-black text-gray-800 uppercase tracking-widest">
+              Cấu hình thanh toán (VietQR)
+            </h2>
+            <div className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm flex flex-col md:flex-row gap-10">
+              <div className="flex-[1.5] space-y-6">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">
+                    Ngân hàng
+                  </label>
+                  <select
+                    value={bankInfo.bankId}
+                    onChange={(e) =>
+                      setBankInfo({ ...bankInfo, bankId: e.target.value })
+                    }
+                    className="w-full bg-gray-50 border border-gray-100 px-4 py-3.5 rounded-xl text-xs font-bold text-gray-800 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                  >
+                    <option value="">-- Chọn ngân hàng --</option>
+                    {bankList.map((bank) => (
+                      <option key={bank.bin} value={bank.bin}>
+                        {bank.shortName} - {bank.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">
+                    Số tài khoản
+                  </label>
+                  <input
+                    type="text"
+                    value={bankInfo.accountNo}
+                    onChange={(e) =>
+                      setBankInfo({ ...bankInfo, accountNo: e.target.value })
+                    }
+                    className="w-full bg-gray-50 border border-gray-100 px-4 py-3.5 rounded-xl text-xs font-bold text-gray-800 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                    placeholder="Nhập số tài khoản..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">
+                    Tên tài khoản (Chủ thẻ)
+                  </label>
+                  <input
+                    type="text"
+                    value={bankInfo.accountName}
+                    onChange={(e) =>
+                      setBankInfo({ ...bankInfo, accountName: e.target.value })
+                    }
+                    className="w-full bg-gray-50 border border-gray-100 px-4 py-3.5 rounded-xl text-xs font-bold text-gray-800 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                    placeholder="Ví dụ: Bệnh viện đa khoa..."
+                  />
+                  <p className="text-[9px] text-blue-500 font-bold mt-1.5 italic">
+                    *Tự động in hoa, bỏ dấu khi tạo mã.
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">
+                    Nội dung chuyển khoản mặc định
+                  </label>
+                  <input
+                    type="text"
+                    value={bankInfo.description}
+                    onChange={(e) =>
+                      setBankInfo({ ...bankInfo, description: e.target.value })
+                    }
+                    className="w-full bg-gray-50 border border-gray-100 px-4 py-3.5 rounded-xl text-xs font-bold text-gray-800 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                    placeholder="Ví dụ: CK TIEN THUOC"
+                  />
+                  <p className="text-[9px] text-blue-500 font-bold mt-1.5 italic">
+                    *Mã tự động thêm tên khách hàng lên trước (nếu có).
+                  </p>
+                </div>
+                <button
+                  onClick={handleSaveBankInfo}
+                  className="w-full bg-blue-600 text-white py-4 rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-blue-100 hover:bg-blue-700 active:scale-[0.98] transition-all mt-4"
+                >
+                  Xác Nhận & Sinh QR Test
+                </button>
+              </div>
+
+              <div className="flex-1 border-t md:border-t-0 md:border-l border-gray-100 pt-8 md:pt-0 md:pl-10 flex flex-col items-center justify-center">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-6">
+                  Mã QR Xem Trước
+                </p>
+                {testQrUrl ? (
+                  <div className="w-full max-w-[250px] aspect-square bg-gray-50 rounded-3xl border-2 border-dashed border-blue-200 flex items-center justify-center overflow-hidden p-2 shadow-inner">
+                    <img
+                      src={testQrUrl}
+                      alt="QR Test"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-full max-w-[250px] aspect-square bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200 flex items-center justify-center text-center p-6">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">
+                      Bấm xác nhận để tạo mã
+                    </p>
+                  </div>
+                )}
+                {testQrUrl && (
+                  <div className="mt-6 text-center w-full">
+                    <p className="text-[10px] font-bold text-gray-500 uppercase">
+                      Số tiền mẫu
+                    </p>
+                    <p className="text-xl font-black text-blue-600">
+                      1,234,567đ
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
