@@ -6,6 +6,57 @@ import Import from "./Import";
 import Login from "./Login";
 import Info from "./Info";
 
+// HÀM ĐỌC SỐ TIỀN BẰNG CHỮ
+const docTienBangChu = (so) => {
+  if (so === 0) return "Không đồng";
+  const chuSo = [
+    "khong",
+    "một",
+    "hai",
+    "ba",
+    "bốn",
+    "năm",
+    "sáu",
+    "bảy",
+    "tám",
+    "chín",
+  ];
+  const docBlock = (so) => {
+    let ketQua = "";
+    let tram = Math.floor(so / 100);
+    let chuc = Math.floor((so % 100) / 10);
+    let donVi = so % 10;
+    if (tram > 0) {
+      ketQua += chuSo[tram] + " trăm ";
+      if (chuc === 0 && donVi > 0) ketQua += "lẻ ";
+    }
+    if (chuc === 1) ketQua += "mười ";
+    else if (chuc > 1) ketQua += chuSo[chuc] + " mươi ";
+    if (donVi === 1 && chuc > 1) ketQua += "mốt ";
+    else if (donVi === 5 && chuc > 0) ketQua += "lăm ";
+    else if (donVi > 0 && !(chuc === 1 && donVi === 1))
+      ketQua += chuSo[donVi] + " ";
+    return ketQua.trim();
+  };
+  let str = so.toString();
+  let blocks = ["", "ngàn", "triệu", "tỷ"];
+  let result = [];
+  let index = 0;
+  while (str.length > 0) {
+    let blockVal = parseInt(str.slice(-3), 10);
+    str = str.slice(0, -3);
+    if (blockVal > 0) {
+      result.unshift(docBlock(blockVal) + " " + blocks[index]);
+    } else if (index === 3) {
+      result.unshift(blocks[index]);
+    }
+    index++;
+  }
+  let finalStr = result.join(" ").trim().replace(/\s+/g, " ") + " đồng";
+  finalStr = finalStr.replace(/khong/g, "không");
+  return finalStr.charAt(0).toUpperCase() + finalStr.slice(1);
+};
+
 function App() {
   // === STATE QUẢN LÝ AUTH (ĐĂNG NHẬP) ===
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -40,6 +91,10 @@ function App() {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState(null); // 'cash' | 'transfer'
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
+  const [isPrintRequested, setIsPrintRequested] = useState(false);
+
+  // STATE LƯU DỮ LIỆU ĐỂ IN (Thêm vào cùng chỗ khai báo state)
+  const [printData, setPrintData] = useState(null);
 
   // === 0. CÀI ĐẶT TAB TITLE VÀ ICON TRÌNH DUYỆT ===
   useEffect(() => {
@@ -245,6 +300,7 @@ function App() {
 
   const processPayment = (shouldPrint) => {
     if (paymentMethod === "transfer") {
+      setIsPrintRequested(shouldPrint); // Lưu lại lựa chọn người dùng bấm In hay Không in
       setIsPaymentModalOpen(false);
       setIsQRModalOpen(true);
     } else {
@@ -268,6 +324,7 @@ function App() {
       const totalAmount = calculateTotal();
       const pType = paymentMethod === "transfer" ? "Chuyển khoản" : "Tiền mặt";
 
+      // 1. LƯU DB NHƯ CŨ
       await db.orders.add({
         order_id: orderId,
         created_at: Date.now(),
@@ -299,19 +356,39 @@ function App() {
       setProducts(await db.products.toArray());
       setIsPaymentModalOpen(false);
       setIsQRModalOpen(false);
-      setCart([]);
-      setOrderId(null);
-      setCustomerName("");
-      setOtherCosts("");
 
-      // Delay alert 1 chút để âm thanh kịp kêu mượt mà
-      setTimeout(() => {
-        alert(
-          shouldPrint
-            ? "Thanh toán thành công. Đang in hóa đơn..."
-            : "Thanh toán thành công!",
-        );
-      }, 100);
+      // 2. XỬ LÝ LỆNH IN
+      if (shouldPrint) {
+        const now = new Date();
+        // Chụp lại toàn bộ dữ liệu giỏ hàng để in
+        setPrintData({
+          customerName: customerName.trim(),
+          cart: [...cart],
+          totalAmount,
+          date: {
+            day: now.getDate(),
+            month: now.getMonth() + 1,
+            year: now.getFullYear(),
+          },
+        });
+
+        // Đợi 500ms cho React render HTML hóa đơn rồi gọi lệnh in
+        setTimeout(() => {
+          window.print();
+          // Sau khi in (hoặc tắt hộp thoại), reset UI
+          setCart([]);
+          setOrderId(null);
+          setCustomerName("");
+          setOtherCosts("");
+          setPrintData(null);
+        }, 500);
+      } else {
+        // Nếu chọn KHÔNG IN HOÁ ĐƠN -> Reset luôn
+        setCart([]);
+        setOrderId(null);
+        setCustomerName("");
+        setOtherCosts("");
+      }
     } catch (error) {
       console.error("Lỗi:", error);
       alert("Lỗi khi lưu đơn hàng!");
@@ -899,7 +976,7 @@ function App() {
               </p>
             </div>
             <button
-              onClick={() => completeTransaction(false)}
+              onClick={() => completeTransaction(isPrintRequested)} // Sử dụng giá trị đã lưu thay vì false
               className="w-full py-5 bg-gray-900 text-white rounded-[24px] font-black text-lg uppercase tracking-widest hover:bg-black transition-all shadow-xl active:scale-95"
             >
               Xác nhận đã nhận tiền
@@ -913,6 +990,142 @@ function App() {
             >
               ← Quay lại thay đổi phương thức
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ================= CẤU HÌNH CSS KHI IN MÁY A4/A5 ================= */}
+      <style>{`
+  @media print {
+    @page {
+      size: auto;
+      margin: 0mm; /* Bỏ lề mặc định để mất Header/Footer của trình duyệt */
+    }
+    body * {
+      visibility: hidden;
+    }
+    #print-area-a4, #print-area-a4 * {
+      visibility: visible;
+    }
+    #print-area-a4 {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      margin: 0;
+      /* Tự tạo lề bản in bằng padding để nội dung không bị sát mép giấy */
+      padding: 15mm 20mm; 
+      background: white;
+    }
+    .no-print {
+      display: none !important;
+    }
+  }
+`}</style>
+
+      {/* ================= GIAO DIỆN HÓA ĐƠN CHUẨN (SAO CHÉP 100% ẢNH) ================= */}
+      {printData && (
+        <div
+          id="print-area-a4"
+          className="hidden print:block bg-white text-black w-full"
+          style={{ fontFamily: '"Times New Roman", Times, serif' }}
+        >
+          {/* Header */}
+          <h1 className="text-center font-bold text-2xl mb-1">
+            HÓA ĐƠN BÁN HÀNG
+          </h1>
+          <p className="text-center italic text-sm mb-6">
+            Ngày {printData.date.day.toString().padStart(2, "0")} Tháng{" "}
+            {printData.date.month.toString().padStart(2, "0")} Năm{" "}
+            {printData.date.year}
+          </p>
+
+          {/* Thông tin khách hàng */}
+          <div className="flex justify-between mb-2 text-[15px]">
+            <div className="flex gap-4 w-2/3">
+              <span className="whitespace-nowrap">Họ tên:</span>
+              <span className="uppercase uppercase flex-1">
+                {printData.customerName}
+              </span>
+            </div>
+            <div className="flex gap-4 w-1/3">
+              <span className="whitespace-nowrap">Năm sinh:</span>
+              <span className="flex-1"></span>
+            </div>
+          </div>
+          <div className="flex gap-4 mb-6 text-[15px]">
+            <span className="whitespace-nowrap">Địa chỉ:</span>
+            <span className="flex-1"></span>
+          </div>
+
+          {/* Bảng chi tiết */}
+          <table className="w-full border-collapse border border-black mb-2 text-[15px]">
+            <thead>
+              <tr>
+                <th className="border border-black p-2 text-center w-12 font-bold">
+                  STT
+                </th>
+                <th className="border border-black p-2 text-center font-bold">
+                  Tên thuốc, VTYT
+                </th>
+                <th className="border border-black p-2 text-center w-24 font-bold">
+                  Số lượng
+                </th>
+                <th className="border border-black p-2 text-center w-32 font-bold">
+                  Đơn giá
+                </th>
+                <th className="border border-black p-2 text-center w-32 font-bold">
+                  Thành tiền
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {printData.cart.map((item, index) => (
+                <tr key={index}>
+                  <td className="border-x border-black border-b border-dashed p-2 text-center">
+                    {index + 1}
+                  </td>
+                  <td className="border-x border-black border-b border-dashed p-2">
+                    {item.name}
+                  </td>
+                  <td className="border-x border-black border-b border-dashed p-2 text-center">
+                    {item.quantity}
+                  </td>
+                  <td className="border-x border-black border-b border-dashed p-2 text-right">
+                    {(item.sell_price || 0).toLocaleString()}
+                  </td>
+                  <td className="border-x border-black border-b border-dashed p-2 text-right">
+                    {((item.sell_price || 0) * item.quantity).toLocaleString()}
+                  </td>
+                </tr>
+              ))}
+              <tr>
+                <td
+                  colSpan={4}
+                  className="border border-black p-2 text-center font-bold"
+                >
+                  Tổng cộng:
+                </td>
+                <td className="border border-black p-2 text-right">
+                  {printData.totalAmount.toLocaleString()}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          {/* Tổng tiền bằng chữ */}
+          <div className="flex gap-3 mb-10 text-[15px]">
+            <span className="italic">Bằng chữ:</span>
+            <span className="italic">
+              {docTienBangChu(printData.totalAmount)} .
+            </span>
+          </div>
+
+          {/* Chữ ký */}
+          <div className="flex justify-end pr-16 text-[15px]">
+            <div className="text-center">
+              <p>Người bán</p>
+            </div>
           </div>
         </div>
       )}

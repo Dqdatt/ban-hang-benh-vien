@@ -175,12 +175,26 @@ export default function Reports() {
         .where("order_id")
         .equals(order.order_id)
         .toArray();
+
       for (let it of items) {
+        // --- LOGIC MỚI: HOÀN TRẢ SỐ LƯỢNG VÀO KHO ---
+        const product = await db.products.get(Number(it.product_id));
+        if (product) {
+          await db.products.update(Number(it.product_id), {
+            stock: (Number(product.stock) || 0) + Number(it.quantity),
+            total_export: Math.max(
+              0,
+              (Number(product.total_export) || 0) - Number(it.quantity),
+            ),
+          });
+        }
+        // --------------------------------------------
+
         await db.order_items.delete(it.id);
       }
       await db.orders.delete(order.id);
       alert("Đã xóa hóa đơn thành công!");
-      loadData();
+      loadData(); // Load lại data để cập nhật Dashboard
     } catch (error) {
       console.error("Lỗi khi xóa hóa đơn:", error);
       alert("Đã xảy ra lỗi khi xóa hóa đơn!");
@@ -1065,8 +1079,17 @@ export default function Reports() {
       {/* MODAL: XUẤT HĐ CHUYỂN KHOẢN */}
       {isExportModalOpen && (
         <div className="fixed inset-0 z-[100] bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <style type="text/css" media="print">
+            {`
+              body * { visibility: hidden; }
+              #print-area, #print-area * { visibility: visible; }
+              #print-area { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 10px; background: white; }
+              .no-print { display: none !important; }
+            `}
+          </style>
+
           <div className="bg-white rounded-3xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[80vh] animate-in slide-in-from-bottom-4">
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 shrink-0">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 shrink-0 no-print">
               <h2 className="text-sm font-black text-gray-800 uppercase tracking-widest">
                 Hóa Đơn Chuyển Khoản Trong Ngày
               </h2>
@@ -1089,20 +1112,28 @@ export default function Reports() {
                 </svg>
               </button>
             </div>
-            <div className="p-6 flex-1 overflow-y-auto custom-scrollbar">
+
+            {/* VÙNG IN BẮT ĐẦU */}
+            <div
+              id="print-area"
+              className="p-6 flex-1 overflow-y-auto custom-scrollbar"
+            >
+              <h2 className="hidden print:block text-center font-bold text-xl mb-4 uppercase">
+                Danh sách chuyển khoản trong ngày
+              </h2>
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-gray-50/50">
-                    <th className="px-4 py-3 text-[10px] font-black text-gray-400 uppercase w-12 text-center">
+                  <tr className="bg-gray-50/50 print:bg-transparent">
+                    <th className="px-4 py-3 text-[10px] font-black text-gray-400 print:text-black uppercase w-12 text-center print:border-b">
                       STT
                     </th>
-                    <th className="px-4 py-3 text-[10px] font-black text-gray-400 uppercase">
+                    <th className="px-4 py-3 text-[10px] font-black text-gray-400 print:text-black uppercase print:border-b">
                       Thời gian
                     </th>
-                    <th className="px-4 py-3 text-[10px] font-black text-gray-400 uppercase">
+                    <th className="px-4 py-3 text-[10px] font-black text-gray-400 print:text-black uppercase print:border-b">
                       Tên KH
                     </th>
-                    <th className="px-4 py-3 text-[10px] font-black text-gray-400 uppercase text-right">
+                    <th className="px-4 py-3 text-[10px] font-black text-gray-400 print:text-black uppercase text-right print:border-b">
                       Số tiền
                     </th>
                   </tr>
@@ -1123,16 +1154,16 @@ export default function Reports() {
                         key={o.order_id}
                         className="border-b border-gray-50 hover:bg-gray-50/50"
                       >
-                        <td className="px-4 py-3 text-[10px] text-gray-400 font-bold text-center">
+                        <td className="px-4 py-3 text-[10px] text-gray-400 print:text-black font-bold text-center">
                           {i + 1}
                         </td>
-                        <td className="px-4 py-3 text-[11px] font-bold text-gray-700">
+                        <td className="px-4 py-3 text-[11px] font-bold text-gray-700 print:text-black">
                           {new Date(o.created_at).toLocaleTimeString()}
                         </td>
-                        <td className="px-4 py-3 text-[11px] font-black text-gray-800 uppercase">
+                        <td className="px-4 py-3 text-[11px] font-black text-gray-800 uppercase print:text-black">
                           {o.customer_name || "Khách lẻ"}
                         </td>
-                        <td className="px-4 py-3 text-[11px] font-black text-blue-600 text-right">
+                        <td className="px-4 py-3 text-[11px] font-black text-blue-600 print:text-black text-right">
                           {(Number(o.total_amount) || 0).toLocaleString()}đ
                         </td>
                       </tr>
@@ -1140,14 +1171,14 @@ export default function Reports() {
                   )}
                 </tbody>
                 <tfoot>
-                  <tr className="border-t border-gray-100 bg-gray-50/30">
+                  <tr className="border-t border-gray-100 bg-gray-50/30 print:bg-transparent">
                     <td
                       colSpan="3"
                       className="px-4 py-4 text-[11px] font-black text-gray-800 uppercase text-right"
                     >
                       Tổng cộng:
                     </td>
-                    <td className="px-4 py-4 text-[13px] font-black text-blue-600 text-right">
+                    <td className="px-4 py-4 text-[13px] font-black text-blue-600 print:text-black text-right">
                       {exportOrders
                         .reduce(
                           (sum, o) => sum + (Number(o.total_amount) || 0),
@@ -1160,9 +1191,11 @@ export default function Reports() {
                 </tfoot>
               </table>
             </div>
-            <div className="p-6 bg-white border-t border-gray-100 flex gap-3 shrink-0">
+            {/* VÙNG IN KẾT THÚC */}
+
+            <div className="p-6 bg-white border-t border-gray-100 flex gap-3 shrink-0 no-print">
               <button
-                onClick={() => alert("Đang kết nối máy in...")}
+                onClick={() => window.print()}
                 className="flex-1 bg-blue-600 text-white py-3 rounded-xl text-[10px] font-bold uppercase hover:bg-blue-700 shadow-lg shadow-blue-100 transition-all"
               >
                 In Báo Cáo
