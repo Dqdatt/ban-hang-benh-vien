@@ -1,6 +1,57 @@
 import React, { useState, useEffect } from "react";
 import { db } from "./db";
 
+// HÀM ĐỌC SỐ TIỀN BẰNG CHỮ
+const docTienBangChu = (so) => {
+  if (so === 0) return "Không đồng";
+  const chuSo = [
+    "khong",
+    "một",
+    "hai",
+    "ba",
+    "bốn",
+    "năm",
+    "sáu",
+    "bảy",
+    "tám",
+    "chín",
+  ];
+  const docBlock = (so) => {
+    let ketQua = "";
+    let tram = Math.floor(so / 100);
+    let chuc = Math.floor((so % 100) / 10);
+    let donVi = so % 10;
+    if (tram > 0) {
+      ketQua += chuSo[tram] + " trăm ";
+      if (chuc === 0 && donVi > 0) ketQua += "lẻ ";
+    }
+    if (chuc === 1) ketQua += "mười ";
+    else if (chuc > 1) ketQua += chuSo[chuc] + " mươi ";
+    if (donVi === 1 && chuc > 1) ketQua += "mốt ";
+    else if (donVi === 5 && chuc > 0) ketQua += "lăm ";
+    else if (donVi > 0 && !(chuc === 1 && donVi === 1))
+      ketQua += chuSo[donVi] + " ";
+    return ketQua.trim();
+  };
+  let str = so.toString();
+  let blocks = ["", "ngàn", "triệu", "tỷ"];
+  let result = [];
+  let index = 0;
+  while (str.length > 0) {
+    let blockVal = parseInt(str.slice(-3), 10);
+    str = str.slice(0, -3);
+    if (blockVal > 0) {
+      result.unshift(docBlock(blockVal) + " " + blocks[index]);
+    } else if (index === 3) {
+      result.unshift(blocks[index]);
+    }
+    index++;
+  }
+  let finalStr = result.join(" ").trim().replace(/\s+/g, " ") + " đồng";
+  finalStr = finalStr.replace(/khong/g, "không");
+  return finalStr.charAt(0).toUpperCase() + finalStr.slice(1);
+};
+
 export default function Reports() {
   // === QUẢN LÝ TABS VÀ QUYỀN ===
   const [activeTab, setActiveTab] = useState("overview"); // overview | logistics | invoices | employees | info
@@ -575,7 +626,7 @@ export default function Reports() {
                 onClick={openExportModal}
                 className="px-6 py-2.5 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all"
               >
-                Xuất HĐ Chuyển khoản
+                Xuất BÁO CÁO CK
               </button>
             </div>
             <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden">
@@ -909,133 +960,294 @@ export default function Reports() {
 
       {/* MODAL: CHI TIẾT HÓA ĐƠN */}
       {isInvoiceModalOpen && selectedInvoice && (
-        <div className="fixed inset-0 z-[100] bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-xl overflow-hidden animate-in zoom-in duration-200">
-            <div className="p-6 border-b border-gray-100 bg-gray-50/50">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                    Mã hóa đơn - Khách hàng
-                  </p>
-                  <h2 className="text-xl font-black text-gray-800 uppercase">
-                    {selectedInvoice.order_id}{" "}
-                    <span className="mx-2 text-gray-300">|</span>{" "}
-                    <span className="text-blue-600">
-                      {selectedInvoice.customer_name || "Khách lẻ"}
-                    </span>
-                  </h2>
-                </div>
-                <button
-                  onClick={() => setIsInvoiceModalOpen(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">
-                    Người lập
-                  </p>
-                  <p className="text-[11px] font-bold text-gray-700 uppercase">
-                    {selectedInvoice.user_id || "Hệ thống"}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">
-                    Thời gian
-                  </p>
-                  <p className="text-[11px] font-bold text-gray-700">
-                    {new Date(selectedInvoice.created_at).toLocaleString()}
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="p-0 max-h-[300px] overflow-y-auto custom-scrollbar">
-              <table className="w-full text-left border-collapse">
-                <thead className="sticky top-0 bg-white shadow-sm">
-                  <tr>
-                    <th className="px-6 py-3 text-[9px] font-bold text-gray-400 uppercase">
-                      Sản phẩm
-                    </th>
-                    <th className="px-4 py-3 text-[9px] font-bold text-gray-400 uppercase text-center">
-                      SL
-                    </th>
-                    <th className="px-6 py-3 text-[9px] font-bold text-gray-400 uppercase text-right">
-                      Thành tiền
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {invoiceItems.map((it) => (
-                    <tr key={it.id} className="border-b border-gray-50">
-                      <td className="px-6 py-3">
-                        <p className="text-[11px] font-bold text-gray-800 uppercase">
-                          {it.display_name}
-                        </p>
-                        <p className="text-[9px] text-gray-400 italic">
-                          {Number(it.price).toLocaleString()}đ
-                        </p>
-                      </td>
-                      <td className="px-4 py-3 text-[11px] font-bold text-gray-600 text-center">
-                        x{it.quantity}
-                      </td>
-                      <td className="px-6 py-3 text-[11px] font-bold text-gray-800 text-right">
-                        {(it.price * it.quantity).toLocaleString()}đ
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="p-6 bg-white border-t border-gray-100">
-              <div className="flex justify-between items-center mb-6">
-                <div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                    Tổng cộng
-                  </p>
-                  <p className="text-[9px] text-blue-600 font-bold uppercase tracking-tighter italic">
-                    PTTT: {selectedInvoice.payment_type || "Tiền mặt"}
-                  </p>
-                </div>
-                <p className="text-2xl font-black text-blue-600">
-                  {Number(selectedInvoice.total_amount).toLocaleString()}đ
-                </p>
-              </div>
-              <div className="flex gap-3">
-                {selectedInvoice.payment_type === "Chuyển khoản" && (
+        <>
+          {/* STYLE CHỈ DÙNG KHI BẤM IN TỪ MODAL NÀY */}
+          <style type="text/css" media="print">
+            {`
+              @media print {
+                @page {
+                  size: auto;
+                  margin: 0mm; 
+                }
+                body * {
+                  visibility: hidden;
+                }
+                
+                /* FIX LỖI CĂN LỀ: Phá vỡ layout Flexbox và Relative của các thẻ cha để bản in tràn toàn trang A4 */
+                .pos-body, main {
+                  display: block !important;
+                  position: static !important;
+                }
+                aside {
+                  display: none !important;
+                }
+
+                #print-area-invoice, #print-area-invoice * {
+                  visibility: visible;
+                }
+                #print-area-invoice {
+                  position: absolute;
+                  left: 0;
+                  top: 0;
+                  width: 100%;
+                  margin: 0;
+                  padding: 15mm 20mm; 
+                  background: white;
+                }
+                .no-print {
+                  display: none !important;
+                }
+              }
+            `}
+          </style>
+
+          {/* Giao diện UI (Thêm class no-print để ẩn khi in) */}
+          <div className="fixed inset-0 z-[100] bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 no-print">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-xl overflow-hidden animate-in zoom-in duration-200">
+              <div className="p-6 border-b border-gray-100 bg-gray-50/50">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                      Mã hóa đơn - Khách hàng
+                    </p>
+                    <h2 className="text-xl font-black text-gray-800 uppercase">
+                      {selectedInvoice.order_id}{" "}
+                      <span className="mx-2 text-gray-300">|</span>{" "}
+                      <span className="text-blue-600">
+                        {selectedInvoice.customer_name || "Khách lẻ"}
+                      </span>
+                    </h2>
+                  </div>
                   <button
-                    onClick={() => {
-                      setReQRAmount(selectedInvoice.total_amount);
-                      setIsReQRModalOpen(true);
-                    }}
-                    className="flex-1 bg-blue-600 text-white py-3 rounded-xl text-[10px] font-bold uppercase hover:bg-blue-700 transition-all shadow-lg shadow-blue-100"
+                    onClick={() => setIsInvoiceModalOpen(false)}
+                    className="text-gray-400 hover:text-gray-600"
                   >
-                    Xem mã QR
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
                   </button>
-                )}
-                <button
-                  onClick={() => setIsInvoiceModalOpen(false)}
-                  className="flex-1 bg-gray-100 text-gray-600 py-3 rounded-xl text-[10px] font-bold uppercase hover:bg-gray-200 transition-all"
-                >
-                  Đóng
-                </button>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">
+                      Người lập
+                    </p>
+                    <p className="text-[11px] font-bold text-gray-700 uppercase">
+                      {selectedInvoice.user_id || "Hệ thống"}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">
+                      Thời gian
+                    </p>
+                    <p className="text-[11px] font-bold text-gray-700">
+                      {new Date(selectedInvoice.created_at).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-0 max-h-[300px] overflow-y-auto custom-scrollbar">
+                <table className="w-full text-left border-collapse">
+                  <thead className="sticky top-0 bg-white shadow-sm">
+                    <tr>
+                      <th className="px-6 py-3 text-[9px] font-bold text-gray-400 uppercase">
+                        Sản phẩm
+                      </th>
+                      <th className="px-4 py-3 text-[9px] font-bold text-gray-400 uppercase text-center">
+                        SL
+                      </th>
+                      <th className="px-6 py-3 text-[9px] font-bold text-gray-400 uppercase text-right">
+                        Thành tiền
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {invoiceItems.map((it) => (
+                      <tr key={it.id} className="border-b border-gray-50">
+                        <td className="px-6 py-3">
+                          <p className="text-[11px] font-bold text-gray-800 uppercase">
+                            {it.display_name}
+                          </p>
+                          <p className="text-[9px] text-gray-400 italic">
+                            {Number(it.price).toLocaleString()}đ
+                          </p>
+                        </td>
+                        <td className="px-4 py-3 text-[11px] font-bold text-gray-600 text-center">
+                          x{it.quantity}
+                        </td>
+                        <td className="px-6 py-3 text-[11px] font-bold text-gray-800 text-right">
+                          {(it.price * it.quantity).toLocaleString()}đ
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="p-6 bg-white border-t border-gray-100">
+                <div className="flex justify-between items-center mb-6">
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                      Tổng cộng
+                    </p>
+                    <p className="text-[9px] text-blue-600 font-bold uppercase tracking-tighter italic">
+                      PTTT: {selectedInvoice.payment_type || "Tiền mặt"}
+                    </p>
+                  </div>
+                  <p className="text-2xl font-black text-blue-600">
+                    {Number(selectedInvoice.total_amount).toLocaleString()}đ
+                  </p>
+                </div>
+
+                {/* NÚT THAO TÁC */}
+                <div className="flex gap-3">
+                  {selectedInvoice.payment_type === "Chuyển khoản" && (
+                    <button
+                      onClick={() => {
+                        setReQRAmount(selectedInvoice.total_amount);
+                        setIsReQRModalOpen(true);
+                      }}
+                      className="flex-1 bg-blue-600 text-white py-3 rounded-xl text-[10px] font-bold uppercase hover:bg-blue-700 transition-all shadow-lg shadow-blue-100"
+                    >
+                      QR Code
+                    </button>
+                  )}
+                  {/* THÊM NÚT IN LẠI */}
+                  <button
+                    onClick={() => window.print()}
+                    className="flex-1 bg-green-600 text-white py-3 rounded-xl text-[10px] font-bold uppercase hover:bg-green-700 transition-all shadow-lg shadow-green-100"
+                  >
+                    In lại HĐ
+                  </button>
+                  <button
+                    onClick={() => setIsInvoiceModalOpen(false)}
+                    className="flex-1 bg-gray-100 text-gray-600 py-3 rounded-xl text-[10px] font-bold uppercase hover:bg-gray-200 transition-all"
+                  >
+                    Đóng
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+
+          {/* VÙNG CHỈ HIỂN THỊ KHI IN (SAO CHÉP Y HỆT APP.JSX KÈM NET LIỀN) */}
+          <div
+            id="print-area-invoice"
+            className="hidden print:block bg-white text-black w-full"
+            style={{ fontFamily: '"Times New Roman", Times, serif' }}
+          >
+            <h1 className="text-center font-bold text-2xl mb-1">
+              HÓA ĐƠN BÁN HÀNG
+            </h1>
+            <p className="text-center italic text-sm mb-6">
+              Ngày{" "}
+              {new Date(selectedInvoice.created_at)
+                .getDate()
+                .toString()
+                .padStart(2, "0")}{" "}
+              Tháng{" "}
+              {(new Date(selectedInvoice.created_at).getMonth() + 1)
+                .toString()
+                .padStart(2, "0")}{" "}
+              Năm {new Date(selectedInvoice.created_at).getFullYear()}
+            </p>
+
+            <div className="flex justify-between mb-2 text-[15px]">
+              <div className="flex gap-4 w-2/3">
+                <span className="whitespace-nowrap">Họ tên:</span>
+                <span className="uppercase flex-1">
+                  {selectedInvoice.customer_name}
+                </span>
+              </div>
+              <div className="flex gap-4 w-1/3">
+                <span className="whitespace-nowrap">Năm sinh:</span>
+                <span className="flex-1"></span>
+              </div>
+            </div>
+            <div className="flex gap-4 mb-6 text-[15px]">
+              <span className="whitespace-nowrap">Địa chỉ:</span>
+              <span className="flex-1"></span>
+            </div>
+
+            <table className="w-full border-collapse border border-black mb-2 text-[15px]">
+              <thead>
+                <tr>
+                  <th className="border border-black p-2 text-center w-12 font-bold">
+                    STT
+                  </th>
+                  <th className="border border-black p-2 text-center font-bold">
+                    Tên thuốc, VTYT
+                  </th>
+                  <th className="border border-black p-2 text-center w-24 font-bold">
+                    Số lượng
+                  </th>
+                  <th className="border border-black p-2 text-center w-32 font-bold">
+                    Đơn giá
+                  </th>
+                  <th className="border border-black p-2 text-center w-32 font-bold">
+                    Thành tiền
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {invoiceItems.map((item, index) => (
+                  <tr key={index}>
+                    <td className="border border-black p-2 text-center">
+                      {index + 1}
+                    </td>
+                    <td className="border border-black p-2">
+                      {item.display_name}
+                    </td>
+                    <td className="border border-black p-2 text-center">
+                      {item.quantity}
+                    </td>
+                    <td className="border border-black p-2 text-right">
+                      {(item.price || 0).toLocaleString()}
+                    </td>
+                    <td className="border border-black p-2 text-right">
+                      {((item.price || 0) * item.quantity).toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+                <tr>
+                  <td
+                    colSpan={4}
+                    className="border border-black p-2 text-center font-bold"
+                  >
+                    Tổng cộng:
+                  </td>
+                  <td className="border border-black p-2 text-right">
+                    {Number(selectedInvoice.total_amount).toLocaleString()}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div className="flex gap-3 mb-10 text-[15px]">
+              <span className="italic">Bằng chữ:</span>
+              <span className="italic">
+                {docTienBangChu(Number(selectedInvoice.total_amount))} .
+              </span>
+            </div>
+
+            <div className="flex justify-end pr-16 text-[15px]">
+              <div className="text-center">
+                <p>Người bán</p>
+              </div>
+            </div>
+          </div>
+        </>
       )}
 
       {/* MODAL: XEM LẠI MÃ QR */}

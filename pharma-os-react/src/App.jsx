@@ -1082,19 +1082,19 @@ function App() {
             <tbody>
               {printData.cart.map((item, index) => (
                 <tr key={index}>
-                  <td className="border-x border-black border-b border-dashed p-2 text-center">
+                  <td className="border-x border-black border-b border border-black p-2 text-center">
                     {index + 1}
                   </td>
-                  <td className="border-x border-black border-b border-dashed p-2">
+                  <td className="border-x border-black border-b border border-black p-2">
                     {item.name}
                   </td>
-                  <td className="border-x border-black border-b border-dashed p-2 text-center">
+                  <td className="border-x border-black border-b border border-black p-2 text-center">
                     {item.quantity}
                   </td>
-                  <td className="border-x border-black border-b border-dashed p-2 text-right">
+                  <td className="border-x border-black border-b border border-black p-2 text-right">
                     {(item.sell_price || 0).toLocaleString()}
                   </td>
-                  <td className="border-x border-black border-b border-dashed p-2 text-right">
+                  <td className="border-x border-black border-b border border-black p-2 text-right">
                     {((item.sell_price || 0) * item.quantity).toLocaleString()}
                   </td>
                 </tr>
