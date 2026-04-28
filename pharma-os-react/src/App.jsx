@@ -5,6 +5,7 @@ import Reports from "./Reports";
 import Import from "./Import";
 import Login from "./Login";
 import Info from "./Info";
+import { sum } from "firebase/firestore";
 
 // HÀM ĐỌC SỐ TIỀN BẰNG CHỮ
 const docTienBangChu = (so) => {
@@ -95,6 +96,39 @@ function App() {
 
   // STATE LƯU DỮ LIỆU ĐỂ IN (Thêm vào cùng chỗ khai báo state)
   const [printData, setPrintData] = useState(null);
+
+  const pushToESP32 = async (amount) => {
+    // Địa chỉ IP của ESP32 (đảm bảo đúng với IP hiển thị trên Serial Monitor)
+    const ESP32_IP = "http://192.168.2.79";
+
+    // Link VietQR mới với biến amount được truyền động
+    const qrText = `https://img.vietqr.io/image/970437-045704070016757-compact2.png?amount=${amount}&addInfo=TRAN%20DUC%20MINH%20CK%20TIEN%20THUOC%20CS1&accountName=BENH%20VIEN%20DA%20KHOA%20BUU%20DIEN`;
+
+    console.log("Đang đẩy dữ liệu sang ESP32 với số tiền:", amount);
+
+    try {
+      const response = await fetch(`${ESP32_IP}/api/show_qr`, {
+        method: "POST",
+        // Sử dụng text/plain để tránh các ràng buộc CORS phức tạp của trình duyệt khi gọi IP nội bộ
+        headers: {
+          "Content-Type": "text/plain",
+        },
+        body: JSON.stringify({
+          qr_text: qrText,
+          amount: amount,
+        }),
+      });
+
+      if (response.ok) {
+        console.log("ESP32 đã nhận lệnh và đang hiển thị mã QR.");
+      } else {
+        console.error("ESP32 phản hồi lỗi:", response.status);
+      }
+    } catch (error) {
+      console.error("Lỗi kết nối tới ESP32:", error);
+      // Lưu ý: Nếu web đang chạy HTTPS mà gọi ESP32 qua HTTP, trình duyệt sẽ chặn (Mixed Content)
+    }
+  };
 
   // === 0. CÀI ĐẶT TAB TITLE VÀ ICON TRÌNH DUYỆT ===
   useEffect(() => {
@@ -242,6 +276,7 @@ function App() {
       return;
     }
 
+    // Nếu input rỗng (undefined hoặc ""), parseInt sẽ trả về NaN, lúc đó sẽ lấy mặc định là 1
     const qtyToAdd = parseInt(inputQuantities[product.id]) || 1;
 
     if (qtyToAdd <= 0) {
@@ -268,9 +303,9 @@ function App() {
       return [...prev, { ...product, quantity: qtyToAdd }];
     });
 
-    setInputQuantities((prev) => ({ ...prev, [product.id]: 1 }));
+    // Cập nhật: Reset state về chuỗi rỗng để ô input trống cho lần nhập sau
+    setInputQuantities((prev) => ({ ...prev, [product.id]: "" }));
   };
-
   const removeFromCart = (id) =>
     setCart((prev) => prev.filter((item) => item.id !== id));
 
@@ -303,6 +338,7 @@ function App() {
       setIsPrintRequested(shouldPrint); // Lưu lại lựa chọn người dùng bấm In hay Không in
       setIsPaymentModalOpen(false);
       setIsQRModalOpen(true);
+      pushToESP32(calculateTotal());
     } else {
       completeTransaction(shouldPrint);
     }
@@ -734,14 +770,20 @@ function App() {
                                 type="number"
                                 min="1"
                                 max={stock}
-                                value={inputQuantities[product.id] || 1}
+                                value={
+                                  inputQuantities[product.id] !== undefined
+                                    ? inputQuantities[product.id]
+                                    : ""
+                                }
+                                placeholder="1"
                                 onChange={(e) =>
                                   setInputQuantities((prev) => ({
                                     ...prev,
                                     [product.id]: e.target.value,
                                   }))
                                 }
-                                className="w-16 text-center border border-gray-200 rounded-lg py-1.5 font-bold outline-none bg-white text-xs"
+                                // Đã thêm các class: [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
+                                className="w-16 text-center border border-gray-200 rounded-lg py-1.5 font-bold outline-none bg-white text-xs placeholder:text-gray-300 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                               />
                             </td>
                             <td className="px-3 py-4 text-right">
