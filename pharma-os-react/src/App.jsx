@@ -97,40 +97,40 @@ function App() {
   // STATE LƯU DỮ LIỆU ĐỂ IN (Thêm vào cùng chỗ khai báo state)
   const [printData, setPrintData] = useState(null);
 
-  const pushToESP32 = async (amount) => {
-    // Địa chỉ IP của ESP32 (đảm bảo đúng với IP hiển thị trên Serial Monitor)
-    const ESP32_IP = "http://192.168.2.79";
+  const pushToESP32 = async (amount, custName) => {
+    // Nếu không có tên khách, để mặc định
+    const safeName = custName && custName.trim() !== "" ? custName : "KHACH LE";
 
-    // Link VietQR mới với biến amount được truyền động
-    const qrText = `https://img.vietqr.io/image/970437-045704070016757-compact2.png?amount=${amount}&addInfo=TRAN%20DUC%20MINH%20CK%20TIEN%20THUOC%20CS1&accountName=BENH%20VIEN%20DA%20KHOA%20BUU%20DIEN`;
+    // ĐIỀN IP CỦA ESP32 VÀO ĐÂY
+    const espIp = "192.168.88.61";
 
-    console.log("Đang đẩy dữ liệu sang ESP32 với số tiền:", amount);
+    // Tạo payload JSON khớp với hàm process_payment trong main.cpp của ESP32
+    const payload = {
+      amount: amount.toString(),
+      addInfo:
+        `${formatQRText(safeName)} ${formatQRText(bankInfo.description)}`.trim(),
+      accountNo: bankInfo.accountNo,
+      accountName: bankInfo.accountName,
+      acqId: bankInfo.bankId,
+    };
 
     try {
-      const response = await fetch(`${ESP32_IP}/api/show_qr`, {
+      // Sửa lại thành gọi POST đến endpoint /payment
+      const response = await fetch(`http://${espIp}/payment`, {
         method: "POST",
-        // Sử dụng text/plain để tránh các ràng buộc CORS phức tạp của trình duyệt khi gọi IP nội bộ
         headers: {
-          "Content-Type": "text/plain",
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          qr_text: qrText,
-          amount: amount,
-        }),
+        body: JSON.stringify(payload),
       });
 
-      if (response.ok) {
-        console.log("ESP32 đã nhận lệnh và đang hiển thị mã QR.");
-      } else {
-        console.error("ESP32 phản hồi lỗi:", response.status);
-      }
+      if (!response.ok) throw new Error("Server ESP32 trả về lỗi");
+      console.log("Đã đẩy lệnh tới ESP32 thành công!");
     } catch (error) {
-      console.error("Lỗi kết nối tới ESP32:", error);
-      // Lưu ý: Nếu web đang chạy HTTPS mà gọi ESP32 qua HTTP, trình duyệt sẽ chặn (Mixed Content)
+      console.error("Lỗi gửi tới ESP32:", error);
     }
   };
 
-  // === 0. CÀI ĐẶT TAB TITLE VÀ ICON TRÌNH DUYỆT ===
   useEffect(() => {
     document.title = "POS | PharmaOS";
     let icon = document.querySelector("link[rel~='icon']");
@@ -335,11 +335,18 @@ function App() {
 
   const processPayment = (shouldPrint) => {
     if (paymentMethod === "transfer") {
-      setIsPrintRequested(shouldPrint); // Lưu lại lựa chọn người dùng bấm In hay Không in
+      // Lưu trạng thái in và mở QR modal, đợi xác nhận mới cho in
+      setIsPrintRequested(shouldPrint);
       setIsPaymentModalOpen(false);
       setIsQRModalOpen(true);
-      pushToESP32(calculateTotal());
+
+      // Lấy số tiền từ hàm calculateTotal()
+      const totalAmount = calculateTotal();
+
+      // Gọi hàm đẩy xuống ESP32, sử dụng state customerName của App
+      pushToESP32(totalAmount, customerName);
     } else {
+      // Với tiền mặt, hoàn tất và kích hoạt in luôn
       completeTransaction(shouldPrint);
     }
   };
