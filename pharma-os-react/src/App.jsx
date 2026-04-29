@@ -131,6 +131,20 @@ function App() {
     }
   };
 
+  const cancelPaymentOnESP32 = async () => {
+    const espIp = "192.168.88.61"; // Địa chỉ IP ESP32 của bạn
+    try {
+      await fetch(`http://${espIp}/payment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "cancel" }), // Gửi lệnh cancel
+      });
+      console.log("Đã gửi lệnh ngắt UI QR tới ESP32");
+    } catch (error) {
+      console.error("Lỗi khi gửi lệnh ngắt tới ESP32:", error);
+    }
+  };
+
   useEffect(() => {
     document.title = "POS | PharmaOS";
     let icon = document.querySelector("link[rel~='icon']");
@@ -1034,6 +1048,7 @@ function App() {
               onClick={() => {
                 setIsQRModalOpen(false);
                 setIsPaymentModalOpen(true);
+                cancelPaymentOnESP32();
               }}
               className="mt-4 text-[10px] font-bold text-gray-400 uppercase hover:text-blue-600 transition-colors"
             >
