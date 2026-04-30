@@ -5,7 +5,7 @@ import Reports from "./Reports";
 import Import from "./Import";
 import Login from "./Login";
 import Info from "./Info";
-import { sum } from "firebase/firestore";
+import mqtt from "mqtt";
 
 // HÀM ĐỌC SỐ TIỀN BẰNG CHỮ
 const docTienBangChu = (so) => {
@@ -64,7 +64,7 @@ function App() {
   const [isAuthChecking, setIsAuthChecking] = useState(true);
 
   // === STATE ĐIỀU HƯỚNG HỆ THỐNG ===
-  const [currentView, setCurrentView] = useState("POS"); // 'POS' | 'INVENTORY' | 'REPORTS' | 'IMPORT' | 'INFO'
+  const [currentView, setCurrentView] = useState("POS");
   const [isInvDropOpen, setIsInvDropOpen] = useState(false);
 
   // === STATES CHO GIAO DIỆN VÀ DỮ LIỆU POS ===
@@ -76,6 +76,10 @@ function App() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
 
+  const DEVICE_ID = "device001";
+  const mqtt_topic = `qr/${DEVICE_ID}`;
+  const [mqttClient, setMqttClient] = useState(null);
+
   // === STATES CHO THÔNG TIN NGÂN HÀNG (VIETQR) ===
   const [bankInfo, setBankInfo] = useState({
     bankId: "970437",
@@ -84,65 +88,76 @@ function App() {
     description: " CK TIEN THUOC CS1",
   });
 
-  // STATE: QUẢN LÝ SỐ LƯỢNG NHẬP Ở BẢNG CHỌN THUỐC
   const [inputQuantities, setInputQuantities] = useState({});
 
   // STATES CHO ORDER & THANH TOÁN
   const [orderId, setOrderId] = useState(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState(null); // 'cash' | 'transfer'
+  const [paymentMethod, setPaymentMethod] = useState(null);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
   const [isPrintRequested, setIsPrintRequested] = useState(false);
-
-  // STATE LƯU DỮ LIỆU ĐỂ IN (Thêm vào cùng chỗ khai báo state)
   const [printData, setPrintData] = useState(null);
 
   const pushToESP32 = async (amount, custName) => {
-    // Nếu không có tên khách, để mặc định
-    const safeName = custName && custName.trim() !== "" ? custName : "KHACH LE";
+    if (!mqttClient) {
+      alert("Đang kết nối MQTT...");
+      return;
+    }
 
-    // ĐIỀN IP CỦA ESP32 VÀO ĐÂY
-    const espIp = "192.168.88.61";
+    if (!mqttClient.connected) {
+      alert("MQTT chưa sẵn sàng, thử lại sau 2 giây");
+      return;
+    }
 
-    // Tạo payload JSON khớp với hàm process_payment trong main.cpp của ESP32
-    const payload = {
-      amount: amount.toString(),
-      addInfo:
-        `${formatQRText(safeName)} ${formatQRText(bankInfo.description)}`.trim(),
-      accountNo: bankInfo.accountNo,
-      accountName: bankInfo.accountName,
-      acqId: bankInfo.bankId,
-    };
+    const safeName = custName?.trim() || "KHACH LE";
+    const addInfoStr =
+      `${formatQRText(safeName)} ${formatQRText(bankInfo.description)}`
+        .replace(/\s+/g, " ")
+        .trim();
 
     try {
-      // Sửa lại thành gọi POST đến endpoint /payment
-      const response = await fetch(`http://${espIp}/payment`, {
+      // Gọi API VietQR để lấy chuỗi chuẩn (EMVCo) tránh lỗi quét không được
+      const response = await fetch("https://api.vietqr.io/v2/generate", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accountNo: bankInfo.accountNo,
+          accountName: bankInfo.accountName,
+          acqId: bankInfo.bankId,
+          amount: amount.toString(),
+          addInfo: addInfoStr,
+          format: "text",
+          template: "compact2",
+        }),
       });
 
-      if (!response.ok) throw new Error("Server ESP32 trả về lỗi");
-      console.log("Đã đẩy lệnh tới ESP32 thành công!");
+      const data = await response.json();
+      let qrString = "";
+      if (data && data.code === "00") {
+        qrString = data.data.qrCode;
+      }
+
+      const payload = {
+        type: "pay",
+        amount: amount.toString(),
+        addInfo: addInfoStr,
+        accountNo: bankInfo.accountNo,
+        accountName: bankInfo.accountName,
+        acqId: bankInfo.bankId,
+        qrText: qrString, // Truyền chuỗi chuẩn EMVCo để ESP32 tự vẽ lại
+      };
+
+      mqttClient.publish(mqtt_topic, JSON.stringify(payload), { qos: 1 });
+      console.log("Đã gửi lệnh thanh toán qua MQTT thành công!");
     } catch (error) {
-      console.error("Lỗi gửi tới ESP32:", error);
+      console.error("Lỗi tạo chuỗi QR:", error);
     }
   };
 
-  const cancelPaymentOnESP32 = async () => {
-    const espIp = "192.168.88.61"; // Địa chỉ IP ESP32 của bạn
-    try {
-      await fetch(`http://${espIp}/payment`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "cancel" }), // Gửi lệnh cancel
-      });
-      console.log("Đã gửi lệnh ngắt UI QR tới ESP32");
-    } catch (error) {
-      console.error("Lỗi khi gửi lệnh ngắt tới ESP32:", error);
-    }
+  const cancelPaymentOnESP32 = () => {
+    if (!mqttClient || !mqttClient.connected) return;
+    mqttClient.publish(mqtt_topic, JSON.stringify({ type: "cancel" }));
+    console.log("Đã gửi lệnh hủy thanh toán qua MQTT");
   };
 
   useEffect(() => {
@@ -158,7 +173,21 @@ function App() {
       "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%232563eb'><path d='M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-1 11h-4v4h-4v-4H6v-4h4V6h4v4h4v4z'/></svg>";
   }, []);
 
-  // === 1. TẢI DỮ LIỆU KHI VÀO TRANG ===
+  useEffect(() => {
+    const client = mqtt.connect("wss://broker.emqx.io:8084/mqtt");
+
+    client.on("connect", () => {
+      console.log("MQTT Connected");
+      setMqttClient(client);
+    });
+
+    client.on("reconnect", () => console.log("MQTT Reconnecting..."));
+    client.on("error", (err) => console.log("MQTT Error:", err));
+    client.on("close", () => console.log("MQTT Closed"));
+
+    return () => client.end(true);
+  }, []);
+
   useEffect(() => {
     const initApp = async () => {
       const session = AuthManager.checkSession();
@@ -176,7 +205,6 @@ function App() {
       }
       setIsAuthChecking(false);
 
-      // Tải cấu hình ngân hàng từ localStorage
       const savedBankInfo = localStorage.getItem("bank_info");
       if (savedBankInfo) {
         setBankInfo(JSON.parse(savedBankInfo));
@@ -184,7 +212,6 @@ function App() {
     };
     initApp();
 
-    // Lắng nghe sự thay đổi của bank_info từ tab khác (tab Reports)
     const handleStorageChange = (e) => {
       if (e.key === "bank_info" && e.newValue) {
         setBankInfo(JSON.parse(e.newValue));
@@ -200,44 +227,41 @@ function App() {
     }
   }, [currentView, isAuthenticated]);
 
-  // === HÀM HỖ TRỢ TẠO LINK QR ĐỘNG ===
   const formatQRText = (str) => {
     if (!str) return "";
     let result = str.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // Bỏ dấu tiếng Việt
     result = result.replace(/đ/g, "d").replace(/Đ/g, "D"); // Sửa lỗi chữ Đ
-    result = result.toUpperCase(); // In hoa
-    result = result.replace(/\s+/g, "%20"); // Thay space = %20
-    return result;
+    return result.toUpperCase().trim(); // Trả về có dấu cách (space) bình thường
   };
 
-  // === ÂM THANH ===
   const playCashSound = () => {
-    // Đảm bảo file cash_1.mp3 nằm trong thư mục public
     const audio = new Audio("/cash_1.mp3");
     audio.play().catch((e) => console.log("Không thể phát âm thanh:", e));
   };
 
   const getDynamicQRUrl = (amount) => {
-    const formattedAccountName = formatQRText(bankInfo.accountName);
-    const formattedDescription = formatQRText(bankInfo.description);
-    const safeDesc = formattedDescription.startsWith("%20")
-      ? formattedDescription
-      : `%20${formattedDescription}`;
-    const formattedCustomer = formatQRText(customerName || "KHACH HANG");
+    // Chỉ dùng encodeURIComponent khi tạo đường link URL
+    const formattedAccountName = encodeURIComponent(
+      formatQRText(bankInfo.accountName),
+    );
+    const formattedDescription = encodeURIComponent(
+      formatQRText(bankInfo.description),
+    );
+    const formattedCustomer = encodeURIComponent(
+      formatQRText(customerName || "KHACH HANG"),
+    );
 
-    return `https://img.vietqr.io/image/${bankInfo.bankId}-${bankInfo.accountNo}-compact2.png?amount=${amount}&addInfo=${formattedCustomer}${safeDesc}&accountName=${formattedAccountName}`;
+    // Ghép link chuẩn xác
+    return `https://img.vietqr.io/image/${bankInfo.bankId}-${bankInfo.accountNo}-compact2.png?amount=${amount}&addInfo=${formattedCustomer}%20${formattedDescription}&accountName=${formattedAccountName}`;
   };
 
-  // === LOGIC ĐỒNG BỘ MÀN HÌNH KHÁCH ===
   useEffect(() => {
     const finalTotal =
       typeof calculateTotal === "function" ? calculateTotal() : 0;
-
     const syncData = {
-      // Ép kiểu Number để hiển thị đúng số lượng và thành tiền
       cart: cart.map((item) => ({
         name: item.name,
-        qty: Number(item.quantity) || 0, // <--- SỬA item.qty THÀNH item.quantity Ở DÒNG NÀY
+        qty: Number(item.quantity) || 0,
         sell_price: Number(item.sell_price) || 0,
         type: item.type || "",
       })),
@@ -245,13 +269,10 @@ function App() {
       isQRModalOpen: isQRModalOpen || false,
       qrUrl: getDynamicQRUrl(finalTotal),
     };
-
     localStorage.setItem("pos_customer_sync", JSON.stringify(syncData));
-    // Kích hoạt sự kiện để màn hình khách cập nhật tức thì
     window.dispatchEvent(new Event("storage"));
   }, [cart, isQRModalOpen, otherCosts]);
 
-  // === 2. LOGIC POS ===
   const generateOrderNumber = () => {
     const now = new Date();
     const year = now.getFullYear().toString().slice(-2);
@@ -290,7 +311,6 @@ function App() {
       return;
     }
 
-    // Nếu input rỗng (undefined hoặc ""), parseInt sẽ trả về NaN, lúc đó sẽ lấy mặc định là 1
     const qtyToAdd = parseInt(inputQuantities[product.id]) || 1;
 
     if (qtyToAdd <= 0) {
@@ -317,9 +337,9 @@ function App() {
       return [...prev, { ...product, quantity: qtyToAdd }];
     });
 
-    // Cập nhật: Reset state về chuỗi rỗng để ô input trống cho lần nhập sau
     setInputQuantities((prev) => ({ ...prev, [product.id]: "" }));
   };
+
   const removeFromCart = (id) =>
     setCart((prev) => prev.filter((item) => item.id !== id));
 
@@ -327,7 +347,6 @@ function App() {
     cart.reduce((sum, item) => sum + (item.sell_price || 0) * item.quantity, 0);
   const calculateTotal = () => calculateSubtotal() + Number(otherCosts || 0);
 
-  // === LOGIC MODAL THANH TOÁN ===
   const openPaymentModal = () => {
     if (!orderId || cart.length === 0) {
       alert("Chưa có sản phẩm trong giỏ hoặc chưa tạo đơn hàng!");
@@ -337,30 +356,22 @@ function App() {
     setIsPaymentModalOpen(true);
   };
 
-  // Logic Khóa chéo PTTT
   const handleSelectPayment = (method) => {
     if (paymentMethod === null) {
       setPaymentMethod(method);
     } else if (paymentMethod === method) {
-      setPaymentMethod(null); // Nhấn lại chính nó thì bỏ chọn
+      setPaymentMethod(null);
     }
-    // Nếu khác method đang chọn thì không làm gì (khóa chéo)
   };
 
   const processPayment = (shouldPrint) => {
     if (paymentMethod === "transfer") {
-      // Lưu trạng thái in và mở QR modal, đợi xác nhận mới cho in
+      const totalAmount = calculateTotal();
+      pushToESP32(totalAmount, customerName);
       setIsPrintRequested(shouldPrint);
       setIsPaymentModalOpen(false);
       setIsQRModalOpen(true);
-
-      // Lấy số tiền từ hàm calculateTotal()
-      const totalAmount = calculateTotal();
-
-      // Gọi hàm đẩy xuống ESP32, sử dụng state customerName của App
-      pushToESP32(totalAmount, customerName);
     } else {
-      // Với tiền mặt, hoàn tất và kích hoạt in luôn
       completeTransaction(shouldPrint);
     }
   };
@@ -381,7 +392,6 @@ function App() {
       const totalAmount = calculateTotal();
       const pType = paymentMethod === "transfer" ? "Chuyển khoản" : "Tiền mặt";
 
-      // 1. LƯU DB NHƯ CŨ
       await db.orders.add({
         order_id: orderId,
         created_at: Date.now(),
@@ -414,10 +424,8 @@ function App() {
       setIsPaymentModalOpen(false);
       setIsQRModalOpen(false);
 
-      // 2. XỬ LÝ LỆNH IN
       if (shouldPrint) {
         const now = new Date();
-        // Chụp lại toàn bộ dữ liệu giỏ hàng để in
         setPrintData({
           customerName: customerName.trim(),
           cart: [...cart],
@@ -429,10 +437,8 @@ function App() {
           },
         });
 
-        // Đợi 500ms cho React render HTML hóa đơn rồi gọi lệnh in
         setTimeout(() => {
           window.print();
-          // Sau khi in (hoặc tắt hộp thoại), reset UI
           setCart([]);
           setOrderId(null);
           setCustomerName("");
@@ -440,7 +446,6 @@ function App() {
           setPrintData(null);
         }, 500);
       } else {
-        // Nếu chọn KHÔNG IN HOÁ ĐƠN -> Reset luôn
         setCart([]);
         setOrderId(null);
         setCustomerName("");
@@ -452,7 +457,6 @@ function App() {
     }
   };
 
-  // KIỂM TRA ĐĂNG NHẬP
   if (isAuthChecking) return null;
   if (!isAuthenticated) {
     return (
@@ -479,14 +483,11 @@ function App() {
         .sidebar-item-btn:not(.active):hover { background-color: #f8fafc; color: #64748b; }
       `}</style>
 
-      {/* RENDER TRANG INFO ĐÈ LÊN GIAO DIỆN CHÍNH */}
       {currentView === "INFO" && <Info onBack={() => setCurrentView("POS")} />}
 
-      {/* GIAO DIỆN CHÍNH BỊ ẨN NẾU ĐANG XEM TRANG INFO ĐỂ GIỮ NGUYÊN CART STATE */}
       <div
         className={`pos-body h-screen flex overflow-hidden ${currentView === "INFO" ? "hidden" : ""}`}
       >
-        {/* SIDEBAR DÙNG CHUNG */}
         <aside className="w-44 bg-white border-r border-gray-100 flex flex-col shadow-sm relative z-40">
           <div className="p-4 mb-2">
             <div className="flex items-center gap-2 text-blue-600">
@@ -695,7 +696,6 @@ function App() {
           </div>
         </aside>
 
-        {/* NỘI DUNG THAY ĐỔI THEO VIEW */}
         {currentView === "POS" && (
           <main className="flex-1 flex overflow-hidden p-4 gap-4 relative z-0">
             {/* CỘT 1: CHỌN THUỐC */}
@@ -803,7 +803,6 @@ function App() {
                                     [product.id]: e.target.value,
                                   }))
                                 }
-                                // Đã thêm các class: [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
                                 className="w-16 text-center border border-gray-200 rounded-lg py-1.5 font-bold outline-none bg-white text-xs placeholder:text-gray-300 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                               />
                             </td>
@@ -928,7 +927,6 @@ function App() {
           </main>
         )}
 
-        {/* CÁC VIEW KHÁC */}
         {currentView === "INVENTORY" && <Inventory />}
         {currentView === "IMPORT" && <Import />}
         {currentView === "REPORTS" && <Reports />}
@@ -1039,7 +1037,7 @@ function App() {
               </p>
             </div>
             <button
-              onClick={() => completeTransaction(isPrintRequested)} // Sử dụng giá trị đã lưu thay vì false
+              onClick={() => completeTransaction(isPrintRequested)}
               className="w-full py-5 bg-gray-900 text-white rounded-[24px] font-black text-lg uppercase tracking-widest hover:bg-black transition-all shadow-xl active:scale-95"
             >
               Xác nhận đã nhận tiền
@@ -1063,7 +1061,7 @@ function App() {
   @media print {
     @page {
       size: auto;
-      margin: 0mm; /* Bỏ lề mặc định để mất Header/Footer của trình duyệt */
+      margin: 0mm; 
     }
     body * {
       visibility: hidden;
@@ -1077,7 +1075,6 @@ function App() {
       top: 0;
       width: 100%;
       margin: 0;
-      /* Tự tạo lề bản in bằng padding để nội dung không bị sát mép giấy */
       padding: 15mm 20mm; 
       background: white;
     }
@@ -1087,14 +1084,13 @@ function App() {
   }
 `}</style>
 
-      {/* ================= GIAO DIỆN HÓA ĐƠN CHUẨN (SAO CHÉP 100% ẢNH) ================= */}
+      {/* ================= GIAO DIỆN HÓA ĐƠN CHUẨN ================= */}
       {printData && (
         <div
           id="print-area-a4"
           className="hidden print:block bg-white text-black w-full"
           style={{ fontFamily: '"Times New Roman", Times, serif' }}
         >
-          {/* Header */}
           <h1 className="text-center font-bold text-2xl mb-1">
             HÓA ĐƠN BÁN HÀNG
           </h1>
@@ -1104,7 +1100,6 @@ function App() {
             {printData.date.year}
           </p>
 
-          {/* Thông tin khách hàng */}
           <div className="flex justify-between mb-2 text-[15px]">
             <div className="flex gap-4 w-2/3">
               <span className="whitespace-nowrap">Họ tên:</span>
@@ -1122,7 +1117,6 @@ function App() {
             <span className="flex-1"></span>
           </div>
 
-          {/* Bảng chi tiết */}
           <table className="w-full border-collapse border border-black mb-2 text-[15px]">
             <thead>
               <tr>
@@ -1177,7 +1171,6 @@ function App() {
             </tbody>
           </table>
 
-          {/* Tổng tiền bằng chữ */}
           <div className="flex gap-3 mb-10 text-[15px]">
             <span className="italic">Bằng chữ:</span>
             <span className="italic">
@@ -1185,7 +1178,6 @@ function App() {
             </span>
           </div>
 
-          {/* Chữ ký */}
           <div className="flex justify-end pr-16 text-[15px]">
             <div className="text-center">
               <p>Người bán</p>
