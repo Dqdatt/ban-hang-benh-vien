@@ -4,6 +4,7 @@ import { db } from "./db";
 export default function Inventory() {
   const [products, setProducts] = useState([]);
   const [totalProfit, setTotalProfit] = useState(0);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const loadInventory = async () => {
     try {
@@ -28,6 +29,20 @@ export default function Inventory() {
     loadInventory();
   }, []);
 
+  const filteredProducts = products.filter((p) =>
+    p.name.toLowerCase().includes(searchTerm.toLowerCase()),
+  );
+
+  // --- HÀM TỰ ĐỘNG CẬP NHẬT TỒN KHO THEO CÔNG THỨC ---
+  const syncStock = async (id) => {
+    const p = await db.products.get(Number(id));
+    if (p) {
+      const newStock =
+        (p.stock_initial || 0) + (p.total_import || 0) - (p.total_export || 0);
+      await db.products.update(Number(id), { stock: newStock });
+    }
+  };
+
   const updateSellPrice = async (id, currentPrice, name) => {
     const newPrice = window.prompt(
       `Cập nhật giá bán cho: ${name.toUpperCase()}`,
@@ -48,7 +63,6 @@ export default function Inventory() {
     }
   };
 
-  // Hàm cập nhật giá trị bất kỳ
   const updateGeneralField = async (
     id,
     currentValue,
@@ -72,6 +86,14 @@ export default function Inventory() {
       }
       try {
         await db.products.update(Number(id), { [dbField]: finalValue });
+
+        // Tự động tính lại tồn kho nếu sửa các trường định lượng
+        if (
+          ["stock_initial", "total_import", "total_export"].includes(dbField)
+        ) {
+          await syncStock(id);
+        }
+
         loadInventory();
       } catch (error) {
         console.error(`Lỗi khi cập nhật ${dbField}:`, error);
@@ -79,7 +101,6 @@ export default function Inventory() {
     }
   };
 
-  // Hàm reset giá trị về 0
   const resetToZero = async (id, name, dbField, labelTitle) => {
     if (
       window.confirm(
@@ -88,6 +109,14 @@ export default function Inventory() {
     ) {
       try {
         await db.products.update(Number(id), { [dbField]: 0 });
+
+        // Tự động tính lại tồn kho sau khi reset
+        if (
+          ["stock_initial", "total_import", "total_export"].includes(dbField)
+        ) {
+          await syncStock(id);
+        }
+
         loadInventory();
       } catch (error) {
         console.error(`Lỗi khi reset ${dbField}:`, error);
@@ -99,11 +128,37 @@ export default function Inventory() {
     <main className="flex-1 p-6 overflow-hidden flex flex-col">
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm h-full flex flex-col overflow-hidden transition-all hover:shadow-md">
         <div className="flex-1 overflow-hidden flex flex-col bg-white rounded-[32px] m-4 shadow-sm border border-gray-100">
-          <div className="p-3 border-b border-gray-50 flex justify-between items-center">
-            <h2 className="font-black text-gray-800 uppercase tracking-tighter text-xl ml-4">
-              Báo cáo tổng kho
-            </h2>
-            <div className="bg-white p-4 px-6 rounded-2xl border border-gray-100 shadow-sm border-r-4 border-r-blue-400 min-w-[220px] text-right">
+          {/* Header & Search & Profit */}
+          <div className="px-6 py-3 border-b border-gray-50 flex justify-between items-start">
+            <div className="flex flex-col gap-3">
+              <h2 className="font-black text-gray-800 uppercase tracking-tighter text-xl ml-1">
+                Báo cáo tổng kho
+              </h2>
+              <div className="relative w-64 group">
+                <input
+                  type="text"
+                  placeholder="Tìm tên thuốc..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-9 pr-3 py-1.5 bg-gray-50 border border-gray-100 rounded-lg text-[11px] font-bold uppercase tracking-wider text-gray-700 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all placeholder:text-gray-300 placeholder:font-normal"
+                />
+                <svg
+                  className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-blue-500 transition-colors"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2.5"
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+              </div>
+            </div>
+
+            <div className="bg-white p-4 px-6 rounded-2xl border border-gray-100 shadow-sm border-r-4 border-r-blue-400 min-w-[200px] text-right">
               <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">
                 Tổng lợi nhuận dự tính
               </p>
@@ -122,53 +177,53 @@ export default function Inventory() {
             <table className="w-full text-left border-collapse min-w-[1200px]">
               <thead className="sticky top-0 bg-white shadow-sm z-10">
                 <tr className="border-b border-gray-100">
-                  <th className="px-2 py-2 text-[10px] font-black text-gray-400 uppercase text-center">
+                  <th className="px-2 py-3 text-[10px] font-black text-gray-400 uppercase text-center w-12">
                     STT
                   </th>
-                  <th className="px-2 py-2 text-[10px] font-black text-gray-400 uppercase">
+                  <th className="px-2 py-3 text-[10px] font-black text-gray-400 uppercase">
                     Tên thuốc
                   </th>
-                  <th className="px-2 py-2 text-[10px] font-black text-gray-400 uppercase text-center">
+                  <th className="px-2 py-3 text-[10px] font-black text-gray-400 uppercase text-center w-20">
                     ĐVT
                   </th>
-                  <th className="px-2 py-2 text-[10px] font-black text-gray-400 uppercase text-right">
+                  <th className="px-2 py-3 text-[10px] font-black text-gray-400 uppercase text-right">
                     Giá Nhập
                   </th>
-                  <th className="px-2 py-2 text-[10px] font-black text-gray-400 uppercase text-right">
+                  <th className="px-2 py-3 text-[10px] font-black text-gray-400 uppercase text-right">
                     Giá Bán
                   </th>
-                  <th className="px-2 py-2 text-[10px] font-black text-gray-400 uppercase text-center">
+                  <th className="px-2 py-3 text-[10px] font-black text-gray-400 uppercase text-center">
                     Tồn Đầu
                   </th>
-                  <th className="px-2 py-2 text-[10px] font-black text-gray-400 uppercase text-center">
+                  <th className="px-2 py-3 text-[10px] font-black text-gray-400 uppercase text-center">
                     Tổng Nhập
                   </th>
-                  <th className="px-2 py-2 text-[10px] font-black text-gray-400 uppercase text-center">
+                  <th className="px-2 py-3 text-[10px] font-black text-gray-400 uppercase text-center">
                     Tổng Xuất
                   </th>
-                  <th className="px-2 py-2 text-[10px] font-black text-gray-400 uppercase text-center">
+                  <th className="px-2 py-3 text-[10px] font-black text-gray-400 uppercase text-center">
                     Tồn Kho
                   </th>
-                  <th className="px-2 py-2 text-[10px] font-black text-gray-400 uppercase text-right w-20">
+                  <th className="px-2 py-3 text-[10px] font-black text-gray-400 uppercase text-right w-24">
                     Lợi Nhuận
                   </th>
-                  <th className="px-2 py-2 text-[10px] font-black text-gray-400 uppercase text-center">
+                  <th className="px-2 py-3 text-[10px] font-black text-gray-400 uppercase text-center">
                     Ghi chú
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {products.length === 0 ? (
+                {filteredProducts.length === 0 ? (
                   <tr>
                     <td
                       colSpan="11"
-                      className="py-20 text-center text-gray-400 font-bold uppercase text-xs"
+                      className="py-20 text-center text-gray-400 font-bold uppercase text-[10px]"
                     >
-                      Kho trống
+                      Trống
                     </td>
                   </tr>
                 ) : (
-                  products.map((item, index) => {
+                  filteredProducts.map((item, index) => {
                     const importPrice = item.import_price || 0;
                     const sellPrice = item.sell_price || 0;
                     const stockInitial = item.stock_initial || 0;
@@ -177,23 +232,55 @@ export default function Inventory() {
                     const stock = item.stock || 0;
                     const profit = (sellPrice - importPrice) * totalExport;
 
+                    const EditIcon = () => (
+                      <svg
+                        className="w-3 h-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                        />
+                      </svg>
+                    );
+
+                    const ResetIcon = () => (
+                      <svg
+                        className="w-3 h-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                        />
+                      </svg>
+                    );
+
                     return (
                       <tr
                         key={item.id}
                         className="hover:bg-blue-50/20 transition-colors border-b border-gray-50 group"
                       >
-                        <td className="px-2 py-1.5 text-center text-[11px] font-medium text-gray-800">
+                        <td className="px-2 py-2 text-center text-[11px] font-medium text-gray-400">
                           {index + 1}
                         </td>
-                        <td className="px-2 py-1.5 font-semibold text-gray-800 uppercase text-[11px] leading-tight">
+                        <td className="px-2 py-2 font-semibold text-gray-800 uppercase text-[11px]">
                           {item.name}
                         </td>
-                        <td className="px-2 py-1.5 text-center text-gray-800 font-medium text-[11px]">
+                        <td className="px-2 py-2 text-center text-gray-800 font-medium text-[11px]">
                           {item.type || "---"}
                         </td>
 
                         {/* Giá Nhập */}
-                        <td className="px-2 py-1.5 text-right font-medium text-gray-800 text-[11px]">
+                        <td className="px-2 py-2 text-right font-medium text-gray-800 text-[11px]">
                           <div className="flex items-center justify-end gap-1">
                             <span>{importPrice.toLocaleString()}</span>
                             <button
@@ -208,25 +295,13 @@ export default function Inventory() {
                               }
                               className="p-1 hover:text-blue-500 opacity-0 group-hover:opacity-100"
                             >
-                              <svg
-                                className="w-3 h-3"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth="2"
-                                  d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                                />
-                              </svg>
+                              <EditIcon />
                             </button>
                           </div>
                         </td>
 
                         {/* Giá Bán */}
-                        <td className="px-2 py-1.5 text-right font-bold text-blue-600 text-[11px]">
+                        <td className="px-2 py-2 text-right font-bold text-blue-600 text-[11px]">
                           <div className="flex items-center justify-end gap-1">
                             <span>{sellPrice.toLocaleString()}</span>
                             <button
@@ -235,25 +310,13 @@ export default function Inventory() {
                               }
                               className="p-1 hover:text-blue-800 opacity-0 group-hover:opacity-100"
                             >
-                              <svg
-                                className="w-3 h-3"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth="2"
-                                  d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                                />
-                              </svg>
+                              <EditIcon />
                             </button>
                           </div>
                         </td>
 
-                        {/* Tồn Đầu (Sửa + Reset) */}
-                        <td className="px-2 py-1.5 text-center font-medium text-gray-800 text-[11px]">
+                        {/* Tồn Đầu */}
+                        <td className="px-2 py-2 text-center text-[11px] font-medium text-gray-800">
                           <div className="flex items-center justify-center gap-1">
                             <span>{stockInitial}</span>
                             <div className="flex opacity-0 group-hover:opacity-100 transition-opacity">
@@ -269,19 +332,7 @@ export default function Inventory() {
                                 }
                                 className="p-0.5 hover:text-blue-500"
                               >
-                                <svg
-                                  className="w-3 h-3"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                                  />
-                                </svg>
+                                <EditIcon />
                               </button>
                               <button
                                 onClick={() =>
@@ -293,28 +344,15 @@ export default function Inventory() {
                                   )
                                 }
                                 className="p-0.5 hover:text-red-500 text-gray-300"
-                                title="Reset về 0"
                               >
-                                <svg
-                                  className="w-3 h-3"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                                  />
-                                </svg>
+                                <ResetIcon />
                               </button>
                             </div>
                           </div>
                         </td>
 
-                        {/* Tổng Nhập (Sửa + Reset) */}
-                        <td className="px-2 py-1.5 text-center font-bold text-green-500 text-[11px]">
+                        {/* Tổng Nhập */}
+                        <td className="px-2 py-2 text-center text-[11px] font-bold text-green-500">
                           <div className="flex items-center justify-center gap-1">
                             <span>{totalImport}</span>
                             <div className="flex opacity-0 group-hover:opacity-100 transition-opacity">
@@ -330,19 +368,7 @@ export default function Inventory() {
                                 }
                                 className="p-0.5 hover:text-blue-500"
                               >
-                                <svg
-                                  className="w-3 h-3"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                                  />
-                                </svg>
+                                <EditIcon />
                               </button>
                               <button
                                 onClick={() =>
@@ -354,28 +380,15 @@ export default function Inventory() {
                                   )
                                 }
                                 className="p-0.5 hover:text-red-500 text-gray-300"
-                                title="Reset về 0"
                               >
-                                <svg
-                                  className="w-3 h-3"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                                  />
-                                </svg>
+                                <ResetIcon />
                               </button>
                             </div>
                           </div>
                         </td>
 
-                        {/* Tổng Xuất (Sửa + Reset) */}
-                        <td className="px-2 py-1.5 text-center font-medium text-gray-800 text-[11px]">
+                        {/* Tổng Xuất */}
+                        <td className="px-2 py-2 text-center text-[11px] font-medium text-gray-800">
                           <div className="flex items-center justify-center gap-1">
                             <span>{totalExport}</span>
                             <div className="flex opacity-0 group-hover:opacity-100 transition-opacity">
@@ -391,19 +404,7 @@ export default function Inventory() {
                                 }
                                 className="p-0.5 hover:text-blue-500"
                               >
-                                <svg
-                                  className="w-3 h-3"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                                  />
-                                </svg>
+                                <EditIcon />
                               </button>
                               <button
                                 onClick={() =>
@@ -415,32 +416,17 @@ export default function Inventory() {
                                   )
                                 }
                                 className="p-0.5 hover:text-red-500 text-gray-300"
-                                title="Reset về 0"
                               >
-                                <svg
-                                  className="w-3 h-3"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                                  />
-                                </svg>
+                                <ResetIcon />
                               </button>
                             </div>
                           </div>
                         </td>
 
-                        {/* Tồn Kho (Sửa + Reset) */}
-                        <td className="px-2 py-1.5 text-center bg-gray-50/50">
+                        {/* Tồn Kho */}
+                        <td className="px-2 py-2 text-center text-[11px] font-black text-red-500 bg-gray-50/30">
                           <div className="flex items-center justify-center gap-1">
-                            <span className="font-black text-red-500 text-[11px]">
-                              {stock}
-                            </span>
+                            <span>{stock}</span>
                             <div className="flex opacity-0 group-hover:opacity-100 transition-opacity">
                               <button
                                 onClick={() =>
@@ -454,19 +440,7 @@ export default function Inventory() {
                                 }
                                 className="p-0.5 hover:text-blue-500"
                               >
-                                <svg
-                                  className="w-3 h-3"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                                  />
-                                </svg>
+                                <EditIcon />
                               </button>
                               <button
                                 onClick={() =>
@@ -478,35 +452,20 @@ export default function Inventory() {
                                   )
                                 }
                                 className="p-0.5 hover:text-red-500 text-gray-300"
-                                title="Reset về 0"
                               >
-                                <svg
-                                  className="w-3 h-3"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                                  />
-                                </svg>
+                                <ResetIcon />
                               </button>
                             </div>
                           </div>
                         </td>
 
-                        <td className="px-2 py-1.5 text-right font-black text-green-600 text-[11px]">
+                        <td className="px-2 py-2 text-right text-[11px] font-black text-green-600">
                           {profit > 0 ? profit.toLocaleString() : "0"}đ
                         </td>
 
-                        <td className="px-2 py-1.5 text-[11px] italic text-gray-300 font-medium whitespace-nowrap uppercase">
-                          <div className="flex items-center gap-1">
-                            <span className="truncate max-w-[80px]">
-                              {item.note || "---"}
-                            </span>
+                        <td className="px-2 py-2 text-[11px] italic text-gray-400 uppercase text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <span>{item.note || "---"}</span>
                             <button
                               onClick={() =>
                                 updateGeneralField(
@@ -520,19 +479,7 @@ export default function Inventory() {
                               }
                               className="opacity-0 group-hover:opacity-100"
                             >
-                              <svg
-                                className="w-3 h-3"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth="2"
-                                  d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                                />
-                              </svg>
+                              <EditIcon />
                             </button>
                           </div>
                         </td>

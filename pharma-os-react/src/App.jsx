@@ -116,7 +116,6 @@ function App() {
         .trim();
 
     try {
-      // Gọi API VietQR để lấy chuỗi chuẩn (EMVCo) tránh lỗi quét không được
       const response = await fetch("https://api.vietqr.io/v2/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -144,7 +143,7 @@ function App() {
         accountNo: bankInfo.accountNo,
         accountName: bankInfo.accountName,
         acqId: bankInfo.bankId,
-        qrText: qrString, // Truyền chuỗi chuẩn EMVCo để ESP32 tự vẽ lại
+        qrText: qrString,
       };
 
       mqttClient.publish(mqtt_topic, JSON.stringify(payload), { qos: 1 });
@@ -229,9 +228,9 @@ function App() {
 
   const formatQRText = (str) => {
     if (!str) return "";
-    let result = str.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // Bỏ dấu tiếng Việt
-    result = result.replace(/đ/g, "d").replace(/Đ/g, "D"); // Sửa lỗi chữ Đ
-    return result.toUpperCase().trim(); // Trả về có dấu cách (space) bình thường
+    let result = str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    result = result.replace(/đ/g, "d").replace(/Đ/g, "D");
+    return result.toUpperCase().trim();
   };
 
   const playCashSound = () => {
@@ -240,7 +239,6 @@ function App() {
   };
 
   const getDynamicQRUrl = (amount) => {
-    // Chỉ dùng encodeURIComponent khi tạo đường link URL
     const formattedAccountName = encodeURIComponent(
       formatQRText(bankInfo.accountName),
     );
@@ -251,7 +249,6 @@ function App() {
       formatQRText(customerName || "KHACH HANG"),
     );
 
-    // Ghép link chuẩn xác
     return `https://img.vietqr.io/image/${bankInfo.bankId}-${bankInfo.accountNo}-compact2.png?amount=${amount}&addInfo=${formattedCustomer}%20${formattedDescription}&accountName=${formattedAccountName}`;
   };
 
@@ -347,11 +344,19 @@ function App() {
     cart.reduce((sum, item) => sum + (item.sell_price || 0) * item.quantity, 0);
   const calculateTotal = () => calculateSubtotal() + Number(otherCosts || 0);
 
+  // --- CHỈNH SỬA LOGIC TẠI ĐÂY ---
   const openPaymentModal = () => {
-    if (!orderId || cart.length === 0) {
-      alert("Chưa có sản phẩm trong giỏ hoặc chưa tạo đơn hàng!");
+    if (!orderId) {
+      alert("Vui lòng tạo đơn hàng trước!");
       return;
     }
+
+    // Nếu giỏ hàng trống VÀ chi phí khác cũng trống (hoặc bằng 0)
+    if (cart.length === 0 && (!otherCosts || Number(otherCosts) === 0)) {
+      alert("Chưa có sản phẩm hoặc chi phí dịch vụ để thanh toán!");
+      return;
+    }
+
     setPaymentMethod(null);
     setIsPaymentModalOpen(true);
   };
@@ -634,7 +639,7 @@ function App() {
                   strokeWidth={2}
                   d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                 />
-              </svg>
+              </svg>{" "}
               Màn hình khách
             </button>
           </nav>
@@ -771,7 +776,6 @@ function App() {
                             : stock <= 5
                               ? "text-yellow-500 font-bold"
                               : "text-blue-500";
-
                         return (
                           <tr
                             key={product.id}
@@ -1056,35 +1060,16 @@ function App() {
         </div>
       )}
 
-      {/* ================= CẤU HÌNH CSS KHI IN MÁY A4/A5 ================= */}
       <style>{`
-  @media print {
-    @page {
-      size: auto;
-      margin: 0mm; 
-    }
-    body * {
-      visibility: hidden;
-    }
-    #print-area-a4, #print-area-a4 * {
-      visibility: visible;
-    }
-    #print-area-a4 {
-      position: absolute;
-      left: 0;
-      top: 0;
-      width: 100%;
-      margin: 0;
-      padding: 15mm 20mm; 
-      background: white;
-    }
-    .no-print {
-      display: none !important;
-    }
-  }
-`}</style>
+        @media print {
+          @page { size: auto; margin: 0mm; }
+          body * { visibility: hidden; }
+          #print-area-a4, #print-area-a4 * { visibility: visible; }
+          #print-area-a4 { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 15mm 20mm; background: white; }
+          .no-print { display: none !important; }
+        }
+      `}</style>
 
-      {/* ================= GIAO DIỆN HÓA ĐƠN CHUẨN ================= */}
       {printData && (
         <div
           id="print-area-a4"
@@ -1099,13 +1084,10 @@ function App() {
             {printData.date.month.toString().padStart(2, "0")} Năm{" "}
             {printData.date.year}
           </p>
-
           <div className="flex justify-between mb-2 text-[15px]">
             <div className="flex gap-4 w-2/3">
               <span className="whitespace-nowrap">Họ tên:</span>
-              <span className="uppercase uppercase flex-1">
-                {printData.customerName}
-              </span>
+              <span className="uppercase flex-1">{printData.customerName}</span>
             </div>
             <div className="flex gap-4 w-1/3">
               <span className="whitespace-nowrap">Năm sinh:</span>
@@ -1116,7 +1098,6 @@ function App() {
             <span className="whitespace-nowrap">Địa chỉ:</span>
             <span className="flex-1"></span>
           </div>
-
           <table className="w-full border-collapse border border-black mb-2 text-[15px]">
             <thead>
               <tr>
@@ -1140,19 +1121,17 @@ function App() {
             <tbody>
               {printData.cart.map((item, index) => (
                 <tr key={index}>
-                  <td className="border-x border-black border-b border border-black p-2 text-center">
+                  <td className="border border-black p-2 text-center">
                     {index + 1}
                   </td>
-                  <td className="border-x border-black border-b border border-black p-2">
-                    {item.name}
-                  </td>
-                  <td className="border-x border-black border-b border border-black p-2 text-center">
+                  <td className="border border-black p-2">{item.name}</td>
+                  <td className="border border-black p-2 text-center">
                     {item.quantity}
                   </td>
-                  <td className="border-x border-black border-b border border-black p-2 text-right">
+                  <td className="border border-black p-2 text-right">
                     {(item.sell_price || 0).toLocaleString()}
                   </td>
-                  <td className="border-x border-black border-b border border-black p-2 text-right">
+                  <td className="border border-black p-2 text-right">
                     {((item.sell_price || 0) * item.quantity).toLocaleString()}
                   </td>
                 </tr>
@@ -1170,14 +1149,12 @@ function App() {
               </tr>
             </tbody>
           </table>
-
           <div className="flex gap-3 mb-10 text-[15px]">
             <span className="italic">Bằng chữ:</span>
             <span className="italic">
               {docTienBangChu(printData.totalAmount)} .
             </span>
           </div>
-
           <div className="flex justify-end pr-16 text-[15px]">
             <div className="text-center">
               <p>Người bán</p>

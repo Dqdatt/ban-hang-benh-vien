@@ -91,6 +91,10 @@ export default function Import() {
   const selectProduct = (p) => {
     setName(p.name);
     setUnit(p.type || "");
+    // Auto fill giá nhập và giá bán (nếu có)
+    // Chuyển số thành chuỗi định dạng có dấu phẩy để đồng bộ với hàm formatPrice
+    setImPrice(p.import_price ? p.import_price.toLocaleString() : "");
+    setSelPrice(p.sell_price ? p.sell_price.toLocaleString() : "");
     setShowSuggestions(false);
     setSelectedIndex(-1);
 
