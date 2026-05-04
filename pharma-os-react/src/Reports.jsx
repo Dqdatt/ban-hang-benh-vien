@@ -62,8 +62,9 @@ export default function Reports() {
   const [products, setProducts] = useState([]);
   const [users, setUsers] = useState([]);
   const [stats, setStats] = useState({
-    totalRev: 0,
-    totalOther: 0,
+    totalRevAll: 0, // Tổng doanh thu (tất cả)
+    totalRev: 0, // Doanh thu lẻ (trừ chi phí khác)
+    totalOther: 0, // Chi phí khác
     ordersCount: 0,
     revDay: 0,
     revMonth: 0,
@@ -77,6 +78,10 @@ export default function Reports() {
   const [invoiceItems, setInvoiceItems] = useState([]);
   const [isReQRModalOpen, setIsReQRModalOpen] = useState(false);
   const [reQRAmount, setReQRAmount] = useState(0);
+
+  // === STATES CHO MODAL CHI PHÍ KHÁC ===
+  const [showOtherCostModal, setShowOtherCostModal] = useState(false);
+  const [otherCostFilterDate, setOtherCostFilterDate] = useState("");
 
   // === STATES CHO MODAL XUẤT CHUYỂN KHOẢN ===
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
@@ -102,22 +107,20 @@ export default function Reports() {
   const [bankInfo, setBankInfo] = useState({
     bankId: "970437", // Default: HDBank
     accountNo: "045704070016757",
-    accountName: "Bệnh viện đa khoa bưu điện", // Nhập bình thường
-    description: " CK TIEN THUOC CS1", // Nhập bình thường
+    accountName: "Bệnh viện đa khoa bưu điện",
+    description: " CK TIEN THUOC CS1",
   });
   const [testQrUrl, setTestQrUrl] = useState("");
 
   // === TẢI DỮ LIỆU TỔNG QUAN ===
   const loadData = async () => {
     try {
-      // Check Admin
       const sessionStr = localStorage.getItem("user_session");
       if (sessionStr) {
         const session = JSON.parse(sessionStr);
         setIsAdmin(session.role === "Admin");
       }
 
-      // Fetch Data
       const allOrders = await db.orders
         .orderBy("created_at")
         .reverse()
@@ -129,10 +132,11 @@ export default function Reports() {
       setProducts(allProducts);
       setUsers(allUsers);
 
-      // Tính toán Dashboard Stats
       const now = new Date();
-      let totalRev = 0,
-        totalOther = 0,
+      const todayStr = now.toDateString();
+      let totalRevAll = 0,
+        totalRev = 0,
+        totalOtherToday = 0,
         revDay = 0,
         revMonth = 0,
         revYear = 0;
@@ -141,11 +145,18 @@ export default function Reports() {
         const amt = Number(o.total_amount) || 0;
         const cost = Number(o.other_costs) || 0;
         const pureRev = amt - cost;
+        const orderDate = new Date(o.created_at);
 
-        totalRev += pureRev;
-        totalOther += cost;
+        totalRevAll += amt; // Tổng cộng tất cả
+        totalRev += pureRev; // Doanh thu lẻ (thuần)
+        totalOther += cost; // Chỉ tính chi phí khác
 
         const d = new Date(o.created_at);
+
+        if (orderDate.toDateString() === todayStr) {
+          totalOtherToday += cost;
+        }
+
         if (d.getFullYear() === now.getFullYear()) {
           revYear += pureRev;
           if (d.getMonth() === now.getMonth()) {
@@ -156,8 +167,9 @@ export default function Reports() {
       });
 
       setStats({
+        totalRevAll,
         totalRev,
-        totalOther,
+        totalOther: totalOtherToday,
         ordersCount: allOrders.length,
         revDay,
         revMonth,
@@ -170,8 +182,6 @@ export default function Reports() {
 
   useEffect(() => {
     loadData();
-
-    // Fetch Bank List từ API VietQR
     fetch("https://api.vietqr.io/v2/banks")
       .then((res) => res.json())
       .then((data) => {
@@ -179,7 +189,6 @@ export default function Reports() {
       })
       .catch((err) => console.error("Lỗi tải danh sách ngân hàng:", err));
 
-    // Load cấu hình Bank từ localStorage (nếu có)
     const savedBankInfo = localStorage.getItem("bank_info");
     if (savedBankInfo) {
       setBankInfo(JSON.parse(savedBankInfo));
@@ -213,22 +222,14 @@ export default function Reports() {
   };
 
   const handleDeleteInvoice = async (order) => {
-    if (
-      !window.confirm(
-        `Bạn có chắc chắn muốn xóa hóa đơn ${order.order_id}?\nHành động này không thể hoàn tác.`,
-      )
-    ) {
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa hóa đơn ${order.order_id}?`))
       return;
-    }
-
     try {
       const items = await db.order_items
         .where("order_id")
         .equals(order.order_id)
         .toArray();
-
       for (let it of items) {
-        // --- LOGIC MỚI: HOÀN TRẢ SỐ LƯỢNG VÀO KHO ---
         const product = await db.products.get(Number(it.product_id));
         if (product) {
           await db.products.update(Number(it.product_id), {
@@ -239,16 +240,12 @@ export default function Reports() {
             ),
           });
         }
-        // --------------------------------------------
-
         await db.order_items.delete(it.id);
       }
       await db.orders.delete(order.id);
-      alert("Đã xóa hóa đơn thành công!");
-      loadData(); // Load lại data để cập nhật Dashboard
+      loadData();
     } catch (error) {
       console.error("Lỗi khi xóa hóa đơn:", error);
-      alert("Đã xảy ra lỗi khi xóa hóa đơn!");
     }
   };
 
@@ -272,9 +269,6 @@ export default function Reports() {
         .equals(empForm.username)
         .first();
       if (exist && !empForm.id) return alert("Tên đăng nhập đã tồn tại!");
-      if (exist && empForm.id && exist.id !== empForm.id)
-        return alert("Tên đăng nhập đã tồn tại trên tài khoản khác!");
-
       if (empForm.id) {
         await db.users.update(empForm.id, {
           employee_code: empForm.code,
@@ -323,49 +317,19 @@ export default function Reports() {
         .toArray();
       setEmpHistory(history);
     } catch (err) {
-      console.warn("Chưa index lịch sử", err);
       setEmpHistory([]);
     }
     setIsEmpDetailModalOpen(true);
   };
 
-  // === LOGIC TAB THÔNG TIN (VIETQR) ===
-  const formatQRText = (str) => {
-    if (!str) return "";
-    let result = str.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // Bỏ dấu
-    result = result.replace(/đ/g, "d").replace(/Đ/g, "D"); // Fix chữ Đ
-    result = result.toUpperCase(); // In hoa
-    result = result.replace(/\s+/g, "%20"); // Thay space = %20
-    return result;
-  };
-
   const handleSaveBankInfo = () => {
-    // 1. Lưu cấu hình gốc (có dấu, chữ thường) vào localStorage để dùng toàn cục
     localStorage.setItem("bank_info", JSON.stringify(bankInfo));
-
-    // 2. Chuyển đổi định dạng cho QR
-    const formattedAccountName = formatQRText(bankInfo.accountName);
-    const formattedDescription = formatQRText(bankInfo.description);
-
-    // Đảm bảo description có khoảng trắng (nếu chưa có) để tách tên khách hàng
-    const safeDesc = formattedDescription.startsWith("%20")
-      ? formattedDescription
-      : `%20${formattedDescription}`;
-
-    const soTien = "1234567";
-    const tenKH = "KHACH%20HANG%20TEST";
-    const template = "compact2";
-
-    // 3. Sinh URL mẫu
-    const url = `https://img.vietqr.io/image/${bankInfo.bankId}-${bankInfo.accountNo}-${template}.png?amount=${soTien}&addInfo=${tenKH}${safeDesc}&accountName=${formattedAccountName}`;
-
-    setTestQrUrl(url);
     alert("Cập nhật thông tin thanh toán thành công!");
   };
 
   return (
     <main className="flex-1 flex flex-col overflow-hidden relative">
-      {/* HEADER BÁO CÁO */}
+      {/* HEADER */}
       <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-8 shrink-0">
         <div className="flex items-center gap-4">
           <h1 className="text-lg font-black text-gray-800 uppercase tracking-tighter">
@@ -384,7 +348,7 @@ export default function Reports() {
       </header>
 
       <div className="flex-1 overflow-y-auto custom-scrollbar p-8">
-        {/* NAVIGATION TABS */}
+        {/* NAVIGATION */}
         <div className="flex gap-4 mb-8 bg-gray-100/50 p-1.5 rounded-[20px] w-fit">
           <button
             onClick={() => setActiveTab("overview")}
@@ -428,16 +392,32 @@ export default function Reports() {
             <div className="grid grid-cols-4 gap-6">
               <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm">
                 <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1">
-                  Tổng doanh thu
+                  Tổng doanh thu (tất cả)
                 </p>
                 <p className="text-3xl font-black text-blue-600">
-                  {stats.totalRev.toLocaleString()}đ
+                  {stats.totalRevAll.toLocaleString()}đ
                 </p>
               </div>
               <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm">
                 <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1">
-                  Tổng chi phí khác
+                  Doanh thu lẻ
                 </p>
+                <p className="text-3xl font-black text-green-600">
+                  {stats.totalRev.toLocaleString()}đ
+                </p>
+              </div>
+              <div
+                className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm cursor-pointer hover:bg-orange-50 transition-all group"
+                onClick={() => setShowOtherCostModal(true)}
+              >
+                <div className="flex justify-between items-start">
+                  <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1">
+                    Chi phí khác
+                  </p>
+                  <span className="text-[8px] bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full opacity-0 group-hover:opacity-100">
+                    Chi tiết
+                  </span>
+                </div>
                 <p className="text-3xl font-black text-orange-500">
                   {stats.totalOther.toLocaleString()}đ
                 </p>
@@ -446,11 +426,12 @@ export default function Reports() {
                 <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1">
                   Tổng hóa đơn
                 </p>
-                <p className="text-3xl font-black text-gray-800">
+                <p className="text-3xl font-black text-purple-600">
                   {stats.ordersCount} Đơn
                 </p>
               </div>
             </div>
+
             <div className="grid grid-cols-3 gap-6">
               <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden">
                 <div className="p-4 bg-blue-50/50 border-b border-gray-50 flex items-center gap-2">
@@ -608,19 +589,6 @@ export default function Reports() {
                   placeholder="TÌM MÃ ĐƠN HOẶC TÊN KHÁCH..."
                   className="w-full bg-white border border-gray-100 px-4 py-2.5 rounded-2xl text-[10px] font-bold text-gray-800 uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-blue-100 shadow-sm transition-all"
                 />
-                <svg
-                  className="w-4 h-4 text-gray-300 absolute right-4 top-2.5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  />
-                </svg>
               </div>
               <button
                 onClick={openExportModal}
@@ -735,136 +703,103 @@ export default function Reports() {
               </button>
             </div>
             <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-gray-50/50">
-                      <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase w-20">
-                        Mã NV
-                      </th>
-                      <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase">
-                        Nhân viên
-                      </th>
-                      <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase text-center">
-                        Vai trò
-                      </th>
-                      <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase text-center">
-                        Trạng thái
-                      </th>
-                      <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase text-right">
-                        Doanh thu ngày
-                      </th>
-                      <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase text-right">
-                        Tổng doanh thu
-                      </th>
-                      <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase text-center">
-                        Tài khoản
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users.map((user) => {
-                      const todayStr = new Date().toDateString();
-                      let tRev = 0,
-                        dRev = 0;
-                      orders
-                        .filter((o) => o.user_id === user.username)
-                        .forEach((o) => {
-                          const amt = Number(o.total_amount) || 0;
-                          tRev += amt;
-                          if (
-                            new Date(o.created_at).toDateString() === todayStr
-                          )
-                            dRev += amt;
-                        });
-
-                      return (
-                        <tr
-                          key={user.id}
-                          className="hover:bg-gray-50/50 border-b border-gray-50 transition-all"
-                        >
-                          <td className="px-6 py-4 text-[11px] font-black text-gray-500 uppercase">
-                            {user.employee_code || "N/A"}
-                          </td>
-                          <td className="px-6 py-4 text-[11px] font-black text-gray-800 uppercase">
-                            {user.full_name}
-                          </td>
-                          <td className="px-6 py-4 text-[10px] font-bold text-center">
-                            <span
-                              className={`px-3 py-1 rounded-md ${user.role === "Admin" ? "bg-purple-50 text-purple-600" : "bg-gray-100 text-gray-600"} uppercase`}
-                            >
-                              {user.role}
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-50/50">
+                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase w-20">
+                      Mã NV
+                    </th>
+                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase">
+                      Nhân viên
+                    </th>
+                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase text-center">
+                      Vai trò
+                    </th>
+                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase text-center">
+                      Trạng thái
+                    </th>
+                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase text-right">
+                      Doanh thu ngày
+                    </th>
+                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase text-center">
+                      Tài khoản
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map((user) => {
+                    const todayStr = new Date().toDateString();
+                    let dRev = 0;
+                    orders
+                      .filter((o) => o.user_id === user.username)
+                      .forEach((o) => {
+                        if (new Date(o.created_at).toDateString() === todayStr)
+                          dRev += Number(o.total_amount) || 0;
+                      });
+                    return (
+                      <tr
+                        key={user.id}
+                        className="hover:bg-gray-50/50 border-b border-gray-50 transition-all"
+                      >
+                        <td className="px-6 py-4 text-[11px] font-black text-gray-500 uppercase">
+                          {user.employee_code || "N/A"}
+                        </td>
+                        <td className="px-6 py-4 text-[11px] font-black text-gray-800 uppercase">
+                          {user.full_name}
+                        </td>
+                        <td className="px-6 py-4 text-[10px] font-bold text-center">
+                          <span
+                            className={`px-3 py-1 rounded-md ${user.role === "Admin" ? "bg-purple-50 text-purple-600" : "bg-gray-100 text-gray-600"} uppercase`}
+                          >
+                            {user.role}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-[9px] text-center">
+                          {user.status === "online" ? (
+                            <span className="flex items-center justify-center gap-1.5 text-green-600 font-black">
+                              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>{" "}
+                              ONLINE
                             </span>
-                          </td>
-                          <td className="px-6 py-4 text-[9px] text-center">
-                            {user.status === "online" ? (
-                              <span className="flex items-center justify-center gap-1.5 text-green-600 font-black">
-                                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>{" "}
-                                ONLINE
-                              </span>
-                            ) : (
-                              <span className="text-gray-400 font-bold">
-                                OFFLINE
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 text-right text-[11px] font-black text-blue-600">
-                            {dRev.toLocaleString()}đ
-                          </td>
-                          <td className="px-6 py-4 text-right text-[11px] font-black text-gray-800">
-                            {tRev.toLocaleString()}đ
-                          </td>
-                          <td className="px-6 py-4 text-center flex justify-center gap-1">
-                            <button
-                              onClick={() => viewEmployeeDetail(user)}
-                              className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-[9px] font-black uppercase hover:bg-blue-100"
-                            >
-                              Chi tiết
-                            </button>
-                            <button
-                              onClick={() => openEditEmployee(user)}
-                              className="px-3 py-1.5 bg-amber-50 text-amber-600 rounded-lg text-[9px] font-black uppercase hover:bg-amber-100"
-                            >
-                              Sửa
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                          ) : (
+                            <span className="text-gray-400 font-bold">
+                              OFFLINE
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-right text-[11px] font-black text-blue-600">
+                          {dRev.toLocaleString()}đ
+                        </td>
+                        <td className="px-6 py-4 text-center flex justify-center gap-1">
+                          <button
+                            onClick={() => viewEmployeeDetail(user)}
+                            className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-[9px] font-black uppercase hover:bg-blue-100"
+                          >
+                            Chi tiết
+                          </button>
+                          <button
+                            onClick={() => openEditEmployee(user)}
+                            className="px-3 py-1.5 bg-amber-50 text-amber-600 rounded-lg text-[9px] font-black uppercase hover:bg-amber-100"
+                          >
+                            Sửa
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
 
-        {/* ================= TAB 5: THÔNG TIN (VIETQR) ================= */}
+        {/* ================= TAB 5: THÔNG TIN ================= */}
         {activeTab === "info" && isAdmin && (
           <div className="space-y-6 animate-in fade-in duration-300">
             <h2 className="text-sm font-black text-gray-800 uppercase tracking-widest">
               Cấu hình thanh toán (VietQR)
             </h2>
-            <div className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm flex flex-col md:flex-row gap-10">
-              <div className="flex-[1.5] space-y-6">
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">
-                    Ngân hàng
-                  </label>
-                  <select
-                    value={bankInfo.bankId}
-                    onChange={(e) =>
-                      setBankInfo({ ...bankInfo, bankId: e.target.value })
-                    }
-                    className="w-full bg-gray-50 border border-gray-100 px-4 py-3.5 rounded-xl text-xs font-bold text-gray-800 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                  >
-                    <option value="">-- Chọn ngân hàng --</option>
-                    {bankList.map((bank) => (
-                      <option key={bank.bin} value={bank.bin}>
-                        {bank.shortName} - {bank.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+            <div className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm max-w-2xl">
+              <div className="space-y-6">
                 <div>
                   <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">
                     Số tài khoản
@@ -875,13 +810,12 @@ export default function Reports() {
                     onChange={(e) =>
                       setBankInfo({ ...bankInfo, accountNo: e.target.value })
                     }
-                    className="w-full bg-gray-50 border border-gray-100 px-4 py-3.5 rounded-xl text-xs font-bold text-gray-800 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                    placeholder="Nhập số tài khoản..."
+                    className="w-full bg-gray-50 border border-gray-100 px-4 py-3.5 rounded-xl text-xs font-bold text-gray-800 outline-none"
                   />
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">
-                    Tên tài khoản (Chủ thẻ)
+                    Tên tài khoản
                   </label>
                   <input
                     type="text"
@@ -889,67 +823,15 @@ export default function Reports() {
                     onChange={(e) =>
                       setBankInfo({ ...bankInfo, accountName: e.target.value })
                     }
-                    className="w-full bg-gray-50 border border-gray-100 px-4 py-3.5 rounded-xl text-xs font-bold text-gray-800 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                    placeholder="Ví dụ: Bệnh viện đa khoa..."
+                    className="w-full bg-gray-50 border border-gray-100 px-4 py-3.5 rounded-xl text-xs font-bold text-gray-800 outline-none"
                   />
-                  <p className="text-[9px] text-blue-500 font-bold mt-1.5 italic">
-                    *Tự động in hoa, bỏ dấu khi tạo mã.
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">
-                    Nội dung chuyển khoản mặc định
-                  </label>
-                  <input
-                    type="text"
-                    value={bankInfo.description}
-                    onChange={(e) =>
-                      setBankInfo({ ...bankInfo, description: e.target.value })
-                    }
-                    className="w-full bg-gray-50 border border-gray-100 px-4 py-3.5 rounded-xl text-xs font-bold text-gray-800 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                    placeholder="Ví dụ: CK TIEN THUOC"
-                  />
-                  <p className="text-[9px] text-blue-500 font-bold mt-1.5 italic">
-                    *Mã tự động thêm tên khách hàng lên trước (nếu có).
-                  </p>
                 </div>
                 <button
                   onClick={handleSaveBankInfo}
-                  className="w-full bg-blue-600 text-white py-4 rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-blue-100 hover:bg-blue-700 active:scale-[0.98] transition-all mt-4"
+                  className="w-full bg-blue-600 text-white py-4 rounded-xl text-xs font-black uppercase shadow-lg hover:bg-blue-700 transition-all"
                 >
-                  Xác Nhận & Sinh QR Test
+                  Lưu cấu hình
                 </button>
-              </div>
-
-              <div className="flex-1 border-t md:border-t-0 md:border-l border-gray-100 pt-8 md:pt-0 md:pl-10 flex flex-col items-center justify-center">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-6">
-                  Mã QR Xem Trước
-                </p>
-                {testQrUrl ? (
-                  <div className="w-full max-w-[250px] aspect-square bg-gray-50 rounded-3xl border-2 border-dashed border-blue-200 flex items-center justify-center overflow-hidden p-2 shadow-inner">
-                    <img
-                      src={testQrUrl}
-                      alt="QR Test"
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-full max-w-[250px] aspect-square bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200 flex items-center justify-center text-center p-6">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase">
-                      Bấm xác nhận để tạo mã
-                    </p>
-                  </div>
-                )}
-                {testQrUrl && (
-                  <div className="mt-6 text-center w-full">
-                    <p className="text-[10px] font-bold text-gray-500 uppercase">
-                      Số tiền mẫu
-                    </p>
-                    <p className="text-xl font-black text-blue-600">
-                      1,234,567đ
-                    </p>
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -1091,6 +973,21 @@ export default function Reports() {
                         </td>
                       </tr>
                     ))}
+
+                    {/* DÒNG CHI PHÍ KHÁC THÊM VÀO ĐỂ CHECK - GIỮ NGUYÊN STYLE UI CỦA BẠN */}
+                    {Number(selectedInvoice.other_costs) > 0 && (
+                      <tr className="border-b border-gray-50 bg-gray-50/30 no-print">
+                        <td colSpan="2" className="px-6 py-3 text-right">
+                          <span className="text-[9px] font-bold text-gray-400 uppercase">
+                            Chi phí khác:
+                          </span>
+                        </td>
+                        <td className="px-6 py-3 text-[11px] font-bold text-red-500 text-right">
+                          {Number(selectedInvoice.other_costs).toLocaleString()}
+                          đ
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -1141,7 +1038,7 @@ export default function Reports() {
             </div>
           </div>
 
-          {/* VÙNG CHỈ HIỂN THỊ KHI IN (SAO CHÉP Y HỆT APP.JSX KÈM NET LIỀN) */}
+          {/* VÙNG CHỈ HIỂN THỊ KHI IN (GIỮ NGUYÊN 100%) */}
           <div
             id="print-area-invoice"
             className="hidden print:block bg-white text-black w-full"
@@ -1248,6 +1145,102 @@ export default function Reports() {
             </div>
           </div>
         </>
+      )}
+
+      {/* MODAL: CHI TIẾT CHI PHÍ KHÁC */}
+      {showOtherCostModal && (
+        <div className="fixed inset-0 z-[150] bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-orange-50/50">
+              <h2 className="text-sm font-black text-orange-600 uppercase tracking-widest">
+                Chi tiết Chi phí khác
+              </h2>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={otherCostFilterDate}
+                  onChange={(e) => setOtherCostFilterDate(e.target.value)}
+                  className="border rounded-lg px-2 py-1 text-[11px] font-bold outline-none focus:ring-2 focus:ring-orange-200"
+                />
+                {otherCostFilterDate && (
+                  <button
+                    onClick={() => setOtherCostFilterDate("")}
+                    className="text-[10px] text-red-500 font-bold uppercase"
+                  >
+                    Xóa lọc
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="p-0 max-h-[60vh] overflow-y-auto custom-scrollbar">
+              <table className="w-full text-left border-collapse">
+                <thead className="sticky top-0 bg-white">
+                  <tr className="bg-gray-50/50">
+                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase w-32">
+                      Số hóa đơn
+                    </th>
+                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase">
+                      Ngày giờ
+                    </th>
+                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase text-right">
+                      Số tiền phí
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orders
+                    .filter((o) => {
+                      const hasCost = (Number(o.other_costs) || 0) > 0;
+                      // [HIGHLIGHT] LOGIC LỌC: Nếu có chọn ngày thì lọc theo ngày, nếu không thì hiện tất cả
+                      if (otherCostFilterDate) {
+                        const d = new Date(o.created_at)
+                          .toISOString()
+                          .split("T")[0];
+                        return hasCost && d === otherCostFilterDate;
+                      }
+                      return hasCost;
+                    })
+                    .map((o) => (
+                      <tr
+                        key={o.id}
+                        className="hover:bg-gray-50/50 border-b border-gray-50 transition-all"
+                      >
+                        <td className="px-6 py-4 text-[11px] font-black text-gray-800 uppercase">
+                          {o.order_id}
+                        </td>
+                        <td className="px-6 py-4 text-[11px] font-medium text-gray-500">
+                          {new Date(o.created_at).toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 text-right text-[11px] font-black text-orange-500">
+                          {Number(o.other_costs).toLocaleString()}đ
+                        </td>
+                      </tr>
+                    ))}
+                  {orders.filter((o) => (Number(o.other_costs) || 0) > 0)
+                    .length === 0 && (
+                    <tr>
+                      <td
+                        colSpan="3"
+                        className="p-10 text-center text-[10px] text-gray-400 font-bold uppercase italic"
+                      >
+                        Không có dữ liệu chi phí
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <div className="p-6 bg-white border-t border-gray-100">
+              <button
+                onClick={() => setShowOtherCostModal(false)}
+                className="w-full bg-gray-100 text-gray-600 py-3 rounded-xl text-[10px] font-bold uppercase"
+              >
+                Đóng cửa sổ
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* MODAL: XEM LẠI MÃ QR */}
