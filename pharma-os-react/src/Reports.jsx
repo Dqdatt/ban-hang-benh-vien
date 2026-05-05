@@ -133,10 +133,15 @@ export default function Reports() {
       setUsers(allUsers);
 
       const now = new Date();
-      const todayStr = now.toDateString();
+      const todayStart = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+      ).getTime();
+
       let totalRevAll = 0,
         totalRev = 0,
-        totalOtherToday = 0,
+        totalOther = 0,
         revDay = 0,
         revMonth = 0,
         revYear = 0;
@@ -145,23 +150,19 @@ export default function Reports() {
         const amt = Number(o.total_amount) || 0;
         const cost = Number(o.other_costs) || 0;
         const pureRev = amt - cost;
-        const orderDate = new Date(o.created_at);
 
         totalRevAll += amt; // Tổng cộng tất cả
         totalRev += pureRev; // Doanh thu lẻ (thuần)
-        totalOther += cost; // Chỉ tính chi phí khác
 
         const d = new Date(o.created_at);
-
-        if (orderDate.toDateString() === todayStr) {
-          totalOtherToday += cost;
-        }
-
         if (d.getFullYear() === now.getFullYear()) {
           revYear += pureRev;
           if (d.getMonth() === now.getMonth()) {
             revMonth += pureRev;
-            if (d.getDate() === now.getDate()) revDay += pureRev;
+            if (d.getDate() === now.getDate()) {
+              revDay += pureRev;
+              totalOther += cost; // Chỉ cộng chi phí khác nếu thuộc ngày hôm nay
+            }
           }
         }
       });
@@ -169,7 +170,7 @@ export default function Reports() {
       setStats({
         totalRevAll,
         totalRev,
-        totalOther: totalOtherToday,
+        totalOther,
         ordersCount: allOrders.length,
         revDay,
         revMonth,
@@ -194,6 +195,25 @@ export default function Reports() {
       setBankInfo(JSON.parse(savedBankInfo));
     }
   }, []);
+
+  // === LOGIC CHI PHÍ KHÁC VÀ LỌC ===
+  const filteredOtherCosts = orders.filter((o) => {
+    const hasCost = (Number(o.other_costs) || 0) > 0;
+    if (otherCostFilterDate) {
+      const dateObj = new Date(o.created_at);
+      const yyyy = dateObj.getFullYear();
+      const mm = String(dateObj.getMonth() + 1).padStart(2, "0");
+      const dd = String(dateObj.getDate()).padStart(2, "0");
+      const d = `${yyyy}-${mm}-${dd}`;
+      return hasCost && d === otherCostFilterDate;
+    }
+    return hasCost;
+  });
+
+  const totalFilteredOtherCosts = filteredOtherCosts.reduce(
+    (sum, o) => sum + (Number(o.other_costs) || 0),
+    0,
+  );
 
   // === LOGIC TAB HÓA ĐƠN ===
   const filteredOrders = orders.filter(
@@ -400,7 +420,7 @@ export default function Reports() {
               </div>
               <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm">
                 <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1">
-                  Doanh thu lẻ
+                  TỔNG Doanh thu lẻ
                 </p>
                 <p className="text-3xl font-black text-green-600">
                   {stats.totalRev.toLocaleString()}đ
@@ -412,7 +432,7 @@ export default function Reports() {
               >
                 <div className="flex justify-between items-start">
                   <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1">
-                    Chi phí khác
+                    Chi phí khác (trong ngày)
                   </p>
                   <span className="text-[8px] bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full opacity-0 group-hover:opacity-100">
                     Chi tiết
@@ -1155,7 +1175,6 @@ export default function Reports() {
               <h2 className="text-sm font-black text-orange-600 uppercase tracking-widest">
                 Chi tiết Chi phí khác
               </h2>
-
               <div className="flex items-center gap-2">
                 <input
                   type="date"
@@ -1172,6 +1191,12 @@ export default function Reports() {
                   </button>
                 )}
               </div>
+              <button
+                onClick={() => setShowOtherCostModal(false)}
+                className="text-gray-400 hover:text-gray-600 font-bold text-xl"
+              >
+                &times;
+              </button>
             </div>
             <div className="p-0 max-h-[60vh] overflow-y-auto custom-scrollbar">
               <table className="w-full text-left border-collapse">
@@ -1189,36 +1214,23 @@ export default function Reports() {
                   </tr>
                 </thead>
                 <tbody>
-                  {orders
-                    .filter((o) => {
-                      const hasCost = (Number(o.other_costs) || 0) > 0;
-                      // [HIGHLIGHT] LOGIC LỌC: Nếu có chọn ngày thì lọc theo ngày, nếu không thì hiện tất cả
-                      if (otherCostFilterDate) {
-                        const d = new Date(o.created_at)
-                          .toISOString()
-                          .split("T")[0];
-                        return hasCost && d === otherCostFilterDate;
-                      }
-                      return hasCost;
-                    })
-                    .map((o) => (
-                      <tr
-                        key={o.id}
-                        className="hover:bg-gray-50/50 border-b border-gray-50 transition-all"
-                      >
-                        <td className="px-6 py-4 text-[11px] font-black text-gray-800 uppercase">
-                          {o.order_id}
-                        </td>
-                        <td className="px-6 py-4 text-[11px] font-medium text-gray-500">
-                          {new Date(o.created_at).toLocaleString()}
-                        </td>
-                        <td className="px-6 py-4 text-right text-[11px] font-black text-orange-500">
-                          {Number(o.other_costs).toLocaleString()}đ
-                        </td>
-                      </tr>
-                    ))}
-                  {orders.filter((o) => (Number(o.other_costs) || 0) > 0)
-                    .length === 0 && (
+                  {filteredOtherCosts.map((o) => (
+                    <tr
+                      key={o.id}
+                      className="hover:bg-gray-50/50 border-b border-gray-50 transition-all"
+                    >
+                      <td className="px-6 py-4 text-[11px] font-black text-gray-800 uppercase">
+                        {o.order_id}
+                      </td>
+                      <td className="px-6 py-4 text-[11px] font-medium text-gray-500">
+                        {new Date(o.created_at).toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4 text-right text-[11px] font-black text-orange-500">
+                        {Number(o.other_costs).toLocaleString()}đ
+                      </td>
+                    </tr>
+                  ))}
+                  {filteredOtherCosts.length === 0 && (
                     <tr>
                       <td
                         colSpan="3"
@@ -1229,6 +1241,19 @@ export default function Reports() {
                     </tr>
                   )}
                 </tbody>
+                <tfoot>
+                  <tr className="border-t border-gray-100 bg-orange-50/30">
+                    <td
+                      colSpan="2"
+                      className="px-6 py-4 text-[11px] font-black text-gray-800 uppercase text-right"
+                    >
+                      Tổng cộng:
+                    </td>
+                    <td className="px-6 py-4 text-[13px] font-black text-orange-600 text-right">
+                      {totalFilteredOtherCosts.toLocaleString()}đ
+                    </td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
             <div className="p-6 bg-white border-t border-gray-100">
