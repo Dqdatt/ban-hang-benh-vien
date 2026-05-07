@@ -415,7 +415,7 @@ export default function Reports() {
                   Tổng doanh thu (tất cả)
                 </p>
                 <p className="text-3xl font-black text-blue-600">
-                  {stats.totalRevAll.toLocaleString()}đ
+                  {stats.totalRevAll.toLocaleString()} đ
                 </p>
               </div>
               <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm">
@@ -423,7 +423,7 @@ export default function Reports() {
                   TỔNG Doanh thu lẻ
                 </p>
                 <p className="text-3xl font-black text-green-600">
-                  {stats.totalRev.toLocaleString()}đ
+                  {stats.totalRev.toLocaleString()}
                 </p>
               </div>
               <div
@@ -439,7 +439,7 @@ export default function Reports() {
                   </span>
                 </div>
                 <p className="text-3xl font-black text-orange-500">
-                  {stats.totalOther.toLocaleString()}đ
+                  {stats.totalOther.toLocaleString()}
                 </p>
               </div>
               <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm">
@@ -462,7 +462,7 @@ export default function Reports() {
                 </div>
                 <div className="p-6 text-right">
                   <p className="text-3xl font-black text-blue-600">
-                    {stats.revDay.toLocaleString()}đ
+                    {(stats.revDay - stats.totalOther).toLocaleString()}
                   </p>
                 </div>
               </div>
@@ -475,7 +475,7 @@ export default function Reports() {
                 </div>
                 <div className="p-6 text-right">
                   <p className="text-3xl font-black text-purple-600">
-                    {stats.revMonth.toLocaleString()}đ
+                    {stats.revMonth.toLocaleString()}
                   </p>
                 </div>
               </div>
@@ -488,7 +488,7 @@ export default function Reports() {
                 </div>
                 <div className="p-6 text-right">
                   <p className="text-3xl font-black text-green-600">
-                    {stats.revYear.toLocaleString()}đ
+                    {stats.revYear.toLocaleString()}
                   </p>
                 </div>
               </div>
@@ -875,7 +875,6 @@ export default function Reports() {
                   visibility: hidden;
                 }
                 
-                /* FIX LỖI CĂN LỀ: Phá vỡ layout Flexbox và Relative của các thẻ cha để bản in tràn toàn trang A4 */
                 .pos-body, main {
                   display: block !important;
                   position: static !important;
@@ -1058,7 +1057,6 @@ export default function Reports() {
             </div>
           </div>
 
-          {/* VÙNG CHỈ HIỂN THỊ KHI IN (GIỮ NGUYÊN 100%) */}
           <div
             id="print-area-invoice"
             className="hidden print:block bg-white text-black w-full"
@@ -1100,20 +1098,20 @@ export default function Reports() {
             <table className="w-full border-collapse border border-black mb-2 text-[15px]">
               <thead>
                 <tr>
-                  <th className="border border-black p-2 text-center w-12 font-bold">
+                  <th className="border border-black p-2 text-center w-1 whitespace-nowrap font-bold">
                     STT
                   </th>
                   <th className="border border-black p-2 text-center font-bold">
                     Tên thuốc, VTYT
                   </th>
-                  <th className="border border-black p-2 text-center w-24 font-bold">
-                    Số lượng
+                  <th className="border border-black p-2 text-center w-1 whitespace-nowrap font-bold">
+                    SL
                   </th>
-                  <th className="border border-black p-2 text-center w-32 font-bold">
-                    Đơn giá
+                  <th className="border border-black p-2 text-center w-1 whitespace-nowrap font-bold">
+                    ĐG
                   </th>
-                  <th className="border border-black p-2 text-center w-32 font-bold">
-                    Thành tiền
+                  <th className="border border-black p-2 text-center w-1 whitespace-nowrap font-bold">
+                    TT
                   </th>
                 </tr>
               </thead>
@@ -1346,10 +1344,10 @@ export default function Reports() {
             {/* VÙNG IN BẮT ĐẦU */}
             <div
               id="print-area"
-              className="p-6 flex-1 overflow-y-auto custom-scrollbar"
+              className="p-6 print:px-10 print:py-8 flex-1 overflow-y-auto custom-scrollbar"
             >
               <h2 className="hidden print:block text-center font-bold text-xl mb-4 uppercase">
-                Danh sách chuyển khoản trong ngày
+                {`Danh sách chuyển khoản ngày ${new Date().toLocaleDateString("vi-VN")}`}
               </h2>
               <table className="w-full text-left border-collapse">
                 <thead>

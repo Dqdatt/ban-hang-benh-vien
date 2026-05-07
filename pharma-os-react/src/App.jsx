@@ -1101,19 +1101,20 @@ function App() {
           <table className="w-full border-collapse border border-black mb-2 text-[15px]">
             <thead>
               <tr>
-                <th className="border border-black p-2 text-center w-12 font-bold">
+                {/* Sử dụng w-1 để ép cột nhỏ nhất có thể, whitespace-nowrap để không bị nhảy dòng */}
+                <th className="border border-black p-2 text-center w-1 whitespace-nowrap font-bold">
                   STT
                 </th>
                 <th className="border border-black p-2 text-center font-bold">
                   Tên thuốc, VTYT
                 </th>
-                <th className="border border-black p-2 text-center w-24 font-bold">
-                  Số lượng
+                <th className="border border-black p-2 text-center w-1 whitespace-nowrap font-bold">
+                  SL
                 </th>
-                <th className="border border-black p-2 text-center w-32 font-bold">
+                <th className="border border-black p-2 text-center w-1 whitespace-nowrap font-bold">
                   Đơn giá
                 </th>
-                <th className="border border-black p-2 text-center w-32 font-bold">
+                <th className="border border-black p-2 text-center w-1 whitespace-nowrap font-bold">
                   Thành tiền
                 </th>
               </tr>
