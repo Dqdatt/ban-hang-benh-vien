@@ -112,7 +112,7 @@ export default function Import() {
         .first();
       if (existing) {
         await db.products.update(existing.id, {
-          stock: (existing.stock || 0) + item.qty,
+          total_import: (existing.total_import || 0) + item.qty,
           import_price: item.imPrice,
           sell_price: item.selPrice,
           type: item.unit,
@@ -121,7 +121,8 @@ export default function Import() {
         await db.products.add({
           name: item.name,
           type: item.unit,
-          stock: item.qty,
+          total_import: item.qty,
+          total_export: 0,
           import_price: item.imPrice,
           sell_price: item.selPrice,
           status: "Đủ hàng",
