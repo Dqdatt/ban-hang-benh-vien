@@ -161,7 +161,7 @@ export default function Reports() {
             revMonth += pureRev;
             if (d.getDate() === now.getDate()) {
               revDay += pureRev;
-              totalOther += cost; // Chỉ cộng chi phí khác nếu thuộc ngày hôm nay
+              totalOther += cost;
             }
           }
         }
@@ -462,7 +462,7 @@ export default function Reports() {
                 </div>
                 <div className="p-6 text-right">
                   <p className="text-3xl font-black text-blue-600">
-                    {(stats.revDay - stats.totalOther).toLocaleString()}
+                    {stats.revDay.toLocaleString()}
                   </p>
                 </div>
               </div>
@@ -754,7 +754,9 @@ export default function Reports() {
                       .filter((o) => o.user_id === user.username)
                       .forEach((o) => {
                         if (new Date(o.created_at).toDateString() === todayStr)
-                          dRev += Number(o.total_amount) || 0;
+                          dRev +=
+                            (Number(o.total_amount) || 0) -
+                            (Number(o.other_costs) || 0);
                       });
                     return (
                       <tr
