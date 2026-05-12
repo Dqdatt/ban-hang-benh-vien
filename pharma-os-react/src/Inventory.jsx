@@ -85,7 +85,18 @@ export default function Inventory() {
         }
       }
       try {
-        await db.products.update(Number(id), { [dbField]: finalValue });
+        if (dbField === "stock") {
+          const p = await db.products.get(Number(id));
+          const currentTotalImport = p.total_import || 0;
+          const currentTotalExport = p.total_export || 0;
+          const newStockInitial = finalValue - currentTotalImport + currentTotalExport;
+          await db.products.update(Number(id), { 
+            stock: finalValue,
+            stock_initial: newStockInitial
+          });
+        } else {
+          await db.products.update(Number(id), { [dbField]: finalValue });
+        }
 
         // Tự động tính lại tồn kho nếu sửa các trường định lượng
         if (
@@ -108,7 +119,18 @@ export default function Inventory() {
       )
     ) {
       try {
-        await db.products.update(Number(id), { [dbField]: 0 });
+        if (dbField === "stock") {
+          const p = await db.products.get(Number(id));
+          const currentTotalImport = p.total_import || 0;
+          const currentTotalExport = p.total_export || 0;
+          const newStockInitial = 0 - currentTotalImport + currentTotalExport;
+          await db.products.update(Number(id), { 
+            stock: 0,
+            stock_initial: newStockInitial
+          });
+        } else {
+          await db.products.update(Number(id), { [dbField]: 0 });
+        }
 
         // Tự động tính lại tồn kho sau khi reset
         if (
@@ -229,7 +251,7 @@ export default function Inventory() {
                     const stockInitial = item.stock_initial || 0;
                     const totalImport = item.total_import || 0;
                     const totalExport = item.total_export || 0;
-                    const stock = item.stock || 0;
+                    const stock = stockInitial + totalImport - totalExport;
                     const profit = (sellPrice - importPrice) * totalExport;
 
                     const EditIcon = () => (
