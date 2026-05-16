@@ -302,7 +302,10 @@ function App() {
       return;
     }
 
-    const currentStock = Number(product.stock) || 0;
+    const currentStock =
+      (Number(product.stock_initial) || 0) +
+      (Number(product.total_import) || 0) -
+      (Number(product.total_export) || 0);
     if (currentStock <= 0) {
       alert("Sản phẩm đã hết hàng trong kho!");
       return;
@@ -417,10 +420,11 @@ function App() {
 
         const productFromDB = await db.products.get(Number(item.id));
         if (productFromDB) {
+          const newTotalExport = (productFromDB.total_export || 0) + Number(item.quantity);
+          const newStock = (productFromDB.stock_initial || 0) + (productFromDB.total_import || 0) - newTotalExport;
           await db.products.update(Number(item.id), {
-            stock: (productFromDB.stock || 0) - Number(item.quantity),
-            total_export:
-              (productFromDB.total_export || 0) + Number(item.quantity),
+            stock: newStock,
+            total_export: newTotalExport,
           });
         }
       }
@@ -769,7 +773,10 @@ function App() {
                           .includes(searchQuery.toLowerCase()),
                       )
                       .map((product) => {
-                        const stock = Number(product.stock) || 0;
+                        const stock =
+                          (Number(product.stock_initial) || 0) +
+                          (Number(product.total_import) || 0) -
+                          (Number(product.total_export) || 0);
                         const stockColorClass =
                           stock === 0
                             ? "text-red-500 font-black"
